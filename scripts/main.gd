@@ -175,13 +175,17 @@ func _mine_block() -> void:
 		if kind == "" or kind == "bedrock":
 			continue
 		world_blocks[str(cell.x) + ":" + str(cell.y)] = ""
-		if kind == "grass" or kind == "dirt":
+		if kind == "copper_ore":
+			inventory["Copper"] = int(inventory["Copper"]) + 1
+			message = "+1 Copper ore"
+		elif kind == "grass" or kind == "dirt" or kind == "sand" or kind == "sandstone" or kind == "permafrost" or kind == "snow":
 			inventory["Stone"] = int(inventory["Stone"]) + 1
+			message = "+1 " + ("Sand" if kind == "sand" or kind == "sandstone" else "Stone")
 		elif kind == "stone":
 			inventory["Stone"] = int(inventory["Stone"]) + 1
-		if cell.y > 23 and cell.x % 7 == 0:
-			inventory["Copper"] = int(inventory["Copper"]) + 1
-		message = "+1 " + ("Copper" if cell.y > 23 and cell.x % 7 == 0 else "Stone")
+			message = "+1 Stone"
+		else:
+			message = "Mined " + kind
 		message_timer = 1.2
 		return
 	message = "Move close to a block to mine"
@@ -303,18 +307,49 @@ func _draw_world(size: Vector2) -> void:
 			var color := Color(0.35, 0.65, 0.29)
 			if kind == "dirt":
 				color = Color(0.43, 0.28, 0.19)
+			elif kind == "sand":
+				color = Color(0.83, 0.72, 0.43)
+			elif kind == "sandstone":
+				color = Color(0.63, 0.49, 0.29)
+			elif kind == "snow":
+				color = Color(0.83, 0.90, 0.94)
+			elif kind == "permafrost":
+				color = Color(0.49, 0.63, 0.68)
+			elif kind == "copper_ore":
+				color = Color(0.43, 0.36, 0.34)
 			elif kind == "stone":
 				color = Color(0.35, 0.37, 0.40)
 			elif kind == "bedrock":
 				color = Color(0.16, 0.18, 0.22)
+			if kind == "copper_ore":
+				draw_rect(Rect2(px + 4, py + 5, 7, 6), Color(0.78, 0.40, 0.22))
+				draw_rect(Rect2(px + 14, py + 14, 6, 5), Color(0.78, 0.40, 0.22))
 			if ty > surface and tx % 7 == 0 and ty > surface + 7:
 				color = Color(0.32, 0.44, 0.49) if kind == "stone" else color
 			draw_rect(rect, color)
 			draw_rect(Rect2(px, py, TILE, 2), color.lightened(0.15))
 			if kind == "stone" and (tx * 13 + ty * 7) % 11 == 0:
 				draw_rect(Rect2(px + 6, py + 8, 5, 4), Color(0.71, 0.47, 0.27))
-		if tx % 9 == 2 and surface > 0:
-			_draw_tree(px, float(surface * TILE) - camera_offset.y)
+		var ground_screen_y := float(surface * TILE) - camera_offset.y
+		var biome := biome_at(tx)
+		if biome == "desert" and tx % 11 == 4 and surface > 0:
+			_draw_cactus(px, ground_screen_y)
+		elif biome == "snow" and tx % 8 == 2 and surface > 0:
+			_draw_pine(px, ground_screen_y)
+		elif (biome == "forest" and tx % 5 == 2) or (biome == "plains" and tx % 9 == 2):
+			_draw_tree(px, ground_screen_y)
+
+func _draw_cactus(x: float, y: float) -> void:
+	draw_rect(Rect2(x + 9, y - 45, 7, 45), Color(0.18, 0.49, 0.29))
+	draw_rect(Rect2(x + 1, y - 33, 8, 6), Color(0.21, 0.55, 0.32))
+	draw_rect(Rect2(x + 1, y - 41, 6, 14), Color(0.21, 0.55, 0.32))
+	draw_rect(Rect2(x + 16, y - 28, 7, 6), Color(0.21, 0.55, 0.32))
+	draw_rect(Rect2(x + 17, y - 37, 6, 15), Color(0.21, 0.55, 0.32))
+
+func _draw_pine(x: float, y: float) -> void:
+	draw_rect(Rect2(x + 10, y - 62, 7, 62), Color(0.34, 0.25, 0.18))
+	draw_colored_polygon(PackedVector2Array([Vector2(x - 10, y - 28), Vector2(x + 13, y - 91), Vector2(x + 35, y - 28)]), Color(0.12, 0.34, 0.31))
+	draw_colored_polygon(PackedVector2Array([Vector2(x - 6, y - 48), Vector2(x + 13, y - 108), Vector2(x + 31, y - 48)]), Color(0.16, 0.43, 0.38))
 
 func _draw_tree(x: float, y: float) -> void:
 	var trunk := Color(0.31, 0.19, 0.12)
@@ -349,7 +384,7 @@ func _draw_hud(size: Vector2) -> void:
 	draw_rect(Rect2(62, 52, 150, 15), Color(0.28, 0.15, 0.16))
 	draw_rect(Rect2(62, 52, 150.0 * float(health) / 100.0, 15), Color(0.84, 0.25, 0.26))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d   STONE %d   COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY 1  •  EXPLORER", HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY 1  •  " + biome_at(int(player.x / TILE)).to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
 	if message_timer > 0.0:
 		var width := minf(size.x - 40.0, 510.0)
 		draw_rect(Rect2((size.x - width) * 0.5, 34, width, 38), Color(0.05, 0.07, 0.08, 0.82))
