@@ -29,8 +29,11 @@ var day_time := 0.0
 var message := "Welcome to the Shattered Lands"
 var message_timer := 4.0
 var save_timer := 0.0
+var world_seed := 0
 
 func _ready() -> void:
+	randomize()
+	world_seed = randi()
 	_load_world()
 	if slimes.is_empty():
 		slimes = [Vector2(520, 0), Vector2(890, 0), Vector2(1260, 0)]
@@ -102,8 +105,30 @@ func _update_slimes(delta: float) -> void:
 		message = "You recovered at the camp"
 		message_timer = 3.0
 
+func _noise_value(x: int, salt: int) -> float:
+	var value := sin(float(x * 127 + int(world_seed % 997) + salt * 31) * 12.9898) * 43758.5453
+	return value - floor(value)
+
+func biome_at(tile_x: int) -> String:
+	var region := int(floor(float(tile_x) / 34.0))
+	var roll := _noise_value(region, 17)
+	if roll < 0.22:
+		return "desert"
+	if roll < 0.43:
+		return "snow"
+	if roll < 0.72:
+		return "forest"
+	return "plains"
+
 func ground_y_at(tile_x: int) -> float:
+	var biome := biome_at(tile_x)
 	var hills := sin(float(tile_x) * 0.075) * 3.0 + sin(float(tile_x) * 0.021) * 5.0
+	if biome == "forest":
+		hills += sin(float(tile_x) * 0.21) * 1.8
+	elif biome == "desert":
+		hills += sin(float(tile_x) * 0.14) * 1.1
+	elif biome == "snow":
+		hills += sin(float(tile_x) * 0.12) * 2.2
 	return 17.0 + hills
 
 func block_type(tile_x: int, tile_y: int) -> String:
@@ -114,12 +139,32 @@ func block_type(tile_x: int, tile_y: int) -> String:
 	if tile_y < surface:
 		return ""
 	if tile_y == surface:
+		var biome := biome_at(tile_x)
+		if biome == "desert":
+			return "sand"
+		if biome == "snow":
+			return "snow"
 		return "grass"
+	if tile_y > surface + 5 and tile_y < WORLD_DEPTH - 4 and _is_cave(tile_x, tile_y):
+		return ""
 	if tile_y < surface + 5:
+		var biome := biome_at(tile_x)
+		if biome == "desert":
+			return "sandstone"
+		if biome == "snow":
+			return "permafrost"
 		return "dirt"
 	if tile_y < WORLD_DEPTH - 3:
+		if _noise_value(tile_x * 3 + tile_y * 7, 41) > 0.965:
+			return "copper_ore"
 		return "stone"
 	return "bedrock"
+
+func _is_cave(tile_x: int, tile_y: int) -> bool:
+	var a := sin(float(tile_x) * 0.31 + float(world_seed % 113) * 0.04)
+	var b := sin(float(tile_y) * 0.57 + float(tile_x) * 0.13)
+	var c := sin(float(tile_x + tile_y) * 0.19)
+	return a + b + c > 1.55
 
 func _mine_block() -> void:
 	var tx := int(floor((player.x + facing * 42.0) / TILE))
@@ -330,7 +375,7 @@ func _draw_button(center: Vector2, label: String, color: Color) -> void:
 	draw_string(ThemeDB.fallback_font, center + Vector2(0, 5), label, HORIZONTAL_ALIGNMENT_CENTER, 72, 12, Color.WHITE)
 
 func _save_world() -> void:
-	var data := {"player_x": player.x, "player_y": player.y, "health": health, "inventory": inventory, "blocks": world_blocks, "slimes": []}
+	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "inventory": inventory, "blocks": world_blocks, "slimes": []}
 	for slime in slimes:
 		data["slimes"].append([slime.x, slime.y])
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -346,6 +391,7 @@ func _load_world() -> void:
 	var parsed = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return
+	world_seed = int(parsed.get("world_seed", world_seed))
 	player = Vector2(float(parsed.get("player_x", 320.0)), float(parsed.get("player_y", 240.0)))
 	health = int(parsed.get("health", 100))
 	var saved_inventory = parsed.get("inventory", {})
