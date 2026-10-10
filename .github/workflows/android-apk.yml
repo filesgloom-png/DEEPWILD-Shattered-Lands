@@ -3,6 +3,7 @@ name: DEEPWILD Android Build
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -122,7 +123,8 @@ jobs:
           ls -lh build/DEEPWILD-Shattered-Lands.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging build/DEEPWILD-Shattered-Lands.apk | head -n 8
 
-      - name: Upload APK artifact
+      - name: Upload final release APK artifact
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: DEEPWILD-Shattered-Lands-Android-APK
