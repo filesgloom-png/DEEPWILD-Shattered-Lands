@@ -88,6 +88,7 @@ var walk_animation_time := 0.0
 var player_was_moving := false
 const CAMERA_ZOOM := 1.22
 var joystick_id := -1
+var panel_touch_id := -1
 var joystick_origin := Vector2.ZERO
 var joystick_current := Vector2.ZERO
 var mouse_joystick := false
@@ -509,7 +510,10 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if active_panel != "":
-				_handle_panel_touch(event.position)
+				# A panel accepts one finger at a time to avoid overlapping inventory/craft taps.
+				if panel_touch_id == -1:
+					panel_touch_id = event.index
+					_handle_panel_touch(event.position)
 			elif event.position.x < size.x * 0.46 and joystick_id == -1:
 				joystick_id = event.index
 				joystick_origin = event.position
@@ -518,7 +522,9 @@ func _input(event: InputEvent) -> void:
 			else:
 				_begin_action_touch(event.index, event.position)
 		else:
-			if event.index == joystick_id:
+			if event.index == panel_touch_id:
+				panel_touch_id = -1
+			elif event.index == joystick_id:
 				joystick_id = -1
 				move_axis = 0.0
 			elif event.index == action_touch_id:
@@ -578,10 +584,14 @@ func _begin_action_touch(touch_id: int, pos: Vector2) -> void:
 		return
 	var size := get_viewport_rect().size
 	if pos.distance_to(_menu_button_center(size, 0)) < 27.0:
+		if touch_id >= 0:
+			panel_touch_id = touch_id
 		active_panel = "inventory"
 		queue_redraw()
 		return
 	if pos.distance_to(_menu_button_center(size, 1)) < 27.0:
+		if touch_id >= 0:
+			panel_touch_id = touch_id
 		active_panel = "craft"
 		queue_redraw()
 		return
