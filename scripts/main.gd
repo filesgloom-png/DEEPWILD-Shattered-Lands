@@ -545,9 +545,9 @@ func _handle_action_touch(pos: Vector2) -> void:
 	var size := get_viewport_rect().size
 	var nearest_action := ""
 	var nearest_distance := INF
-	# Use circular targets for the large action buttons and thumb-friendly
-	# rectangular targets for utility chips; normalized distance resolves overlaps.
-	for i in range(6):
+	# Three main controls plus all four utility controls (BAG, CRAFT, USE, POINT).
+	# Keep POINT reachable so checkpoint creation is not silently lost.
+	for i in range(7):
 		var center: Vector2
 		var action: String
 		var target_distance: float
@@ -558,7 +558,7 @@ func _handle_action_touch(pos: Vector2) -> void:
 			target_distance = pos.distance_to(center) / radius
 		else:
 			center = _utility_button_center(size, i - 3)
-			action = ["inventory", "craft", "use"][i - 3]
+			action = ["inventory", "craft", "use", "point"][i - 3]
 			var local_pos := pos - center
 			target_distance = Vector2(local_pos.x / 55.0, local_pos.y / 25.0).length()
 		if target_distance <= 1.0 and target_distance < nearest_distance:
