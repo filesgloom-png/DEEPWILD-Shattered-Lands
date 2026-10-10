@@ -873,7 +873,6 @@ func _draw_world(size: Vector2) -> void:
 				draw_line(Vector2(px + 2.0, py + 3.0), Vector2(px + TILE - 2.0, py + 3.0), EDGE_SHADOW_COLOR, 1.0)
 		var ground_screen_y := float(surface * TILE) - camera_offset.y
 		if ground_screen_y >= -120.0 and ground_screen_y <= size.y + 120.0:
-			var ground_screen_y := float(surface * TILE) - camera_offset.y
 			var biome := biome_at(tx)
 			var has_tree := _tree_exists(tx) and surface > 0
 			if has_tree:
