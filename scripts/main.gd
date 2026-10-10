@@ -683,6 +683,19 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 	var celestial_position := Vector2(celestial_x, celestial_y)
 	draw_circle(celestial_position, 31.0, Color(celestial.r, celestial.g, celestial.b, 0.10))
 	draw_circle(celestial_position, 24.0, celestial)
+	# Tiny celestial details add definition without textures, nodes, or gameplay state.
+	if sun > 0.58:
+		var ray_alpha := clampf((sun - 0.58) * 0.65, 0.0, 0.24)
+		var ray_color := Color(1.0, 0.83, 0.55, ray_alpha)
+		for ray in range(8):
+			var ray_angle := float(ray) * TAU / 8.0 + day_time * 0.03
+			var ray_direction := Vector2(cos(ray_angle), sin(ray_angle))
+			draw_line(celestial_position + ray_direction * 28.0, celestial_position + ray_direction * 34.0, ray_color, 1.0)
+	elif night_strength > 0.55:
+		var crater_color := Color(0.45, 0.52, 0.66, 0.38)
+		draw_circle(celestial_position + Vector2(-7.0, -3.0), 3.2, crater_color)
+		draw_circle(celestial_position + Vector2(5.0, 4.0), 2.2, crater_color)
+		draw_circle(celestial_position + Vector2(8.0, -7.0), 1.5, crater_color)
 
 func _draw_world(size: Vector2) -> void:
 	# Only evaluate cells that can actually appear on screen. The old loop
