@@ -40,8 +40,17 @@ jobs:
           curl -fL --retry 3             https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz             -o /tmp/godot-templates.tpz
           unzip -o /tmp/godot-templates.tpz -d /tmp/godot-templates
           cp /tmp/godot-templates/templates/* "$HOME/.local/share/godot/export_templates/4.5.1.stable/"
+          if [ -s /tmp/godot-templates/version.txt ]; then
+            cp /tmp/godot-templates/version.txt "$HOME/.local/share/godot/export_templates/4.5.1.stable/version.txt"
+          else
+            printf '4.5.1.stable\n' > "$HOME/.local/share/godot/export_templates/4.5.1.stable/version.txt"
+          fi
+          echo "Installed export template files:"
+          ls -lah "$HOME/.local/share/godot/export_templates/4.5.1.stable/"
+          test "$(cat "$HOME/.local/share/godot/export_templates/4.5.1.stable/version.txt")" = "4.5.1.stable"
           test -s "$HOME/.local/share/godot/export_templates/4.5.1.stable/android_debug.apk"
           test -s "$HOME/.local/share/godot/export_templates/4.5.1.stable/android_release.apk"
+          test -s "$HOME/.local/share/godot/export_templates/4.5.1.stable/android_source.zip"
 
       - name: Configure Godot Android SDK paths
         run: |
