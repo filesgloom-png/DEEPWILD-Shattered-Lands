@@ -593,12 +593,16 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 	draw_circle(Vector2(size.x * 0.82, 92.0), 24.0, celestial)
 
 func _draw_world(size: Vector2) -> void:
+	# Only evaluate cells that can actually appear on screen. The old loop
+	# scanned the entire underground depth every frame, even for off-screen rows.
 	var start_x := maxi(0, int(floor(camera_offset.x / TILE)) - 2)
 	var end_x := mini(WORLD_WIDTH, int(ceil((camera_offset.x + size.x) / TILE)) + 2)
+	var start_y := maxi(0, int(floor(camera_offset.y / TILE)) - 1)
+	var end_y := mini(WORLD_DEPTH, int(ceil((camera_offset.y + size.y) / TILE)) + 1)
 	for tx in range(start_x, end_x):
 		var surface := int(round(ground_y_at(tx)))
 		var px := float(tx * TILE) - camera_offset.x
-		for ty in range(maxi(0, int(floor(camera_offset.y / TILE)) - 1), WORLD_DEPTH):
+		for ty in range(start_y, end_y):
 			var kind := block_type(tx, ty)
 			var py := float(ty * TILE) - camera_offset.y
 			if py < -TILE or py > size.y + TILE:
