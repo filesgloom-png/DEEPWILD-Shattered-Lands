@@ -3,6 +3,7 @@ extends Node2D
 const TILE := 24
 const TERRAIN_ATLAS: Texture2D = preload("res://assets/terrain_atlas.svg")
 const CREATURE_ATLAS: Texture2D = preload("res://assets/creature_atlas.svg")
+const HERO_ATLAS: Texture2D = preload("res://assets/hero_atlas.svg")
 const WORLD_WIDTH := 240
 const WORLD_DEPTH := 46
 const GRAVITY := 1150.0
@@ -687,24 +688,11 @@ func _draw_tree(x: float, y: float) -> void:
 
 func _draw_player() -> void:
 	var p := player - camera_offset
-	# More readable adventurer silhouette with layered clothes and backpack.
-	draw_rect(Rect2(p.x - 12, p.y - 13, 24, 13), Color(0.10, 0.11, 0.15, 0.28))
-	draw_rect(Rect2(p.x - 13, p.y - 34, 8, 23), Color(0.38, 0.24, 0.17))
-	draw_rect(Rect2(p.x + 5, p.y - 34, 8, 23), Color(0.38, 0.24, 0.17))
-	draw_rect(Rect2(p.x - 11, p.y - 13, 9, 14), Color(0.16, 0.17, 0.20))
-	draw_rect(Rect2(p.x + 2, p.y - 13, 9, 14), Color(0.16, 0.17, 0.20))
-	draw_rect(Rect2(p.x - 12, p.y - 34, 24, 23), Color(0.12, 0.28, 0.42))
-	draw_rect(Rect2(p.x - 9, p.y - 33, 18, 20), Color(0.22, 0.48, 0.70))
-	draw_rect(Rect2(p.x - 14, p.y - 32, 4, 16), Color(0.79, 0.55, 0.36))
-	draw_rect(Rect2(p.x + 10, p.y - 32, 4, 16), Color(0.79, 0.55, 0.36))
-	draw_rect(Rect2(p.x - 11, p.y - 48, 22, 17), Color(0.78, 0.55, 0.38))
-	draw_rect(Rect2(p.x - 12, p.y - 51, 24, 8), Color(0.20, 0.13, 0.10))
-	draw_rect(Rect2(p.x - 11, p.y - 44, 8, 4), Color(0.20, 0.13, 0.10))
-	draw_rect(Rect2(p.x + facing * 4, p.y - 42, 3, 3), Color(0.09, 0.11, 0.13))
-	draw_rect(Rect2(p.x - 4, p.y - 30, 8, 4), Color(0.79, 0.69, 0.42))
-	draw_rect(Rect2(p.x - facing * 14 - 2, p.y - 31, 5, 13), Color(0.48, 0.28, 0.15))
-	draw_rect(Rect2(p.x + facing * 13, p.y - 27, 14 * facing, 4), Color(0.25, 0.20, 0.15))
-	draw_rect(Rect2(p.x + facing * 22, p.y - 32, 3 * facing, 13), Color(0.72, 0.75, 0.78))
+	# Draw a single crisp pixel-art sprite; horizontal mirroring follows movement.
+	# One atlas draw replaces many per-frame rectangles and keeps mobile rendering light.
+	draw_set_transform(p, 0.0, Vector2(float(facing), 1.0))
+	draw_texture_rect_region(HERO_ATLAS, Rect2(-16, -48, 32, 48), Rect2(0, 0, 32, 48))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_slimes() -> void:
 	for slime in slimes:
