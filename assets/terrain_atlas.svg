@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="24" viewBox="0 0 240 24" shape-rendering="crispEdges">
+<defs>
+<pattern id="dirt" width="12" height="10" patternUnits="userSpaceOnUse"><rect width="12" height="10" fill="#805239"/><rect x="2" y="2" width="3" height="2" fill="#a8754d"/><rect x="8" y="6" width="2" height="2" fill="#5f3b2b"/></pattern>
+<pattern id="sand" width="12" height="9" patternUnits="userSpaceOnUse"><rect width="12" height="9" fill="#d8bd70"/><rect x="2" y="2" width="3" height="1" fill="#f1d991"/><rect x="8" y="6" width="2" height="1" fill="#b99750"/></pattern>
+<pattern id="stone" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#59616c"/><path d="M0 1H12 M0 11H12" stroke="#737d88" stroke-width="1"/><path d="M5 2V6 M2 7H6" stroke="#444b55" stroke-width="1"/></pattern>
+</defs>
+<!-- grass -->
+<g transform="translate(0 0)"><rect width="24" height="24" fill="#805239"/><rect width="24" height="7" fill="#347d3f"/><rect y="2" width="24" height="2" fill="#58a94a"/><path d="M2 6V1 M6 6L8 2 M13 6V0 M18 6L20 2 M22 6V3" stroke="#8bd05b" stroke-width="1"/><path d="M0 8H24" stroke="#5a3929" stroke-width="1"/><rect x="4" y="13" width="3" height="2" fill="#a8754d"/><rect x="15" y="18" width="2" height="2" fill="#5f3b2b"/></g>
+<!-- dirt -->
+<g transform="translate(24 0)"><rect width="24" height="24" fill="url(#dirt)"/><path d="M0 1H24" stroke="#a8754d"/></g>
+<!-- sand -->
+<g transform="translate(48 0)"><rect width="24" height="24" fill="url(#sand)"/><path d="M0 1H24" stroke="#f5df9a"/><rect x="4" y="15" width="5" height="1" fill="#c2a35e"/></g>
+<!-- snow -->
+<g transform="translate(72 0)"><rect width="24" height="24" fill="#91b9c9"/><rect width="24" height="7" fill="#e8f5fb"/><path d="M0 6H24" stroke="#c9e5ef"/><rect x="4" y="13" width="3" height="2" fill="#6c9eb5"/><rect x="15" y="18" width="4" height="2" fill="#729fb2"/></g>
+<!-- stone -->
+<g transform="translate(96 0)"><rect width="24" height="24" fill="url(#stone)"/><path d="M1 4L6 2 M14 8L20 6 M5 18L10 16" stroke="#9099a3" stroke-width="1"/><rect x="17" y="15" width="2" height="2" fill="#424a54"/></g>
+<!-- copper ore -->
+<g transform="translate(120 0)"><rect width="24" height="24" fill="url(#stone)"/><path d="M3 5L9 3L12 7L8 11L3 9Z" fill="#b85e32"/><path d="M14 14L19 12L22 16L18 20L14 18Z" fill="#d98243"/><rect x="5" y="5" width="3" height="2" fill="#f0b56b"/><rect x="16" y="14" width="2" height="2" fill="#f0b56b"/></g>
+<!-- sandstone -->
+<g transform="translate(144 0)"><rect width="24" height="24" fill="#a77d49"/><path d="M0 2H24 M0 12H24 M7 2V12 M17 12V22" stroke="#c39a60" stroke-width="1"/><rect x="3" y="6" width="3" height="2" fill="#8c653d"/></g>
+<!-- permafrost -->
+<g transform="translate(168 0)"><rect width="24" height="24" fill="#668a98"/><path d="M0 2H24 M0 12H24 M5 2V12 M17 12V22" stroke="#8fb2bd" stroke-width="1"/><rect x="8" y="5" width="4" height="2" fill="#a8d2d9"/><rect x="2" y="17" width="3" height="2" fill="#496e7d"/></g>
+<!-- planks -->
+<g transform="translate(192 0)"><rect width="24" height="24" fill="#8b552d"/><path d="M0 1H24 M0 8H24 M0 16H24 M0 23H24" stroke="#c18a4c" stroke-width="1"/><path d="M8 2V7 M18 9V15 M5 17V22" stroke="#60391f" stroke-width="1"/><rect x="3" y="3" width="2" height="1" fill="#e0ae68"/></g>
+<!-- bedrock -->
+<g transform="translate(216 0)"><rect width="24" height="24" fill="#252b36"/><path d="M0 4L6 2L10 5L15 1L24 4 M0 15L7 12L13 16L19 11L24 14" fill="none" stroke="#3c4654" stroke-width="2"/><rect x="4" y="8" width="3" height="2" fill="#1b2029"/><rect x="17" y="19" width="4" height="2" fill="#434d5a"/></g>
+</svg>
