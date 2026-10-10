@@ -91,6 +91,15 @@ var joystick_id := -1
 var joystick_origin := Vector2.ZERO
 var joystick_current := Vector2.ZERO
 var mouse_joystick := false
+var action_touch_id := -1
+var action_touch_origin := Vector2.ZERO
+var action_touch_current := Vector2.ZERO
+var action_hold_time := 0.0
+var action_mouse_down := false
+var radial_open := false
+var radial_choice := ""
+var radial_items: Array[String] = []
+var context_action := ""
 var jump_requested := false
 var mine_requested := false
 var attack_requested := false
@@ -166,6 +175,11 @@ func _process(delta: float) -> void:
 		message_timer = 2.0
 	day_time = fmod(next_day_time, TAU)
 	message_timer = maxf(0.0, message_timer - delta)
+	if action_touch_id != -1 or action_mouse_down:
+		action_hold_time += delta
+		if action_hold_time >= 0.28 and not radial_open:
+			_open_item_wheel()
+	_update_context_hint()
 	save_timer += delta
 	if save_timer >= 12.0:
 		save_timer = 0.0
@@ -502,14 +516,22 @@ func _input(event: InputEvent) -> void:
 				joystick_current = event.position
 				_update_joystick_axis()
 			else:
-				_handle_action_touch(event.position)
+				_begin_action_touch(event.index, event.position)
 		else:
 			if event.index == joystick_id:
 				joystick_id = -1
 				move_axis = 0.0
-	elif event is InputEventScreenDrag and event.index == joystick_id:
-		joystick_current = event.position
-		_update_joystick_axis()
+			elif event.index == action_touch_id:
+				_end_action_touch(event.position)
+	elif event is InputEventScreenDrag:
+		if event.index == joystick_id:
+			joystick_current = event.position
+			_update_joystick_axis()
+		elif event.index == action_touch_id:
+			action_touch_current = event.position
+			if radial_open:
+				_update_radial_choice(event.position)
+			queue_redraw()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			if active_panel != "":
@@ -520,13 +542,22 @@ func _input(event: InputEvent) -> void:
 				joystick_current = event.position
 				_update_joystick_axis()
 			else:
-				_handle_action_touch(event.position)
+				action_mouse_down = true
+				_begin_action_touch(-2, event.position)
 		else:
+			if action_mouse_down:
+				_end_action_touch(event.position)
 			mouse_joystick = false
-			move_axis = 0.0
-	elif event is InputEventMouseMotion and mouse_joystick:
-		joystick_current = event.position
-		_update_joystick_axis()
+			if not action_mouse_down:
+				move_axis = 0.0
+	elif event is InputEventMouseMotion:
+		if mouse_joystick:
+			joystick_current = event.position
+			_update_joystick_axis()
+		elif action_mouse_down:
+			action_touch_current = event.position
+			if radial_open:
+				_update_radial_choice(event.position)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F:
 			mine_requested = true
@@ -534,6 +565,113 @@ func _input(event: InputEvent) -> void:
 			attack_requested = true
 		elif event.keycode == KEY_SPACE:
 			jump_requested = true
+		elif event.keycode == KEY_I:
+			active_panel = "inventory"
+		elif event.keycode == KEY_C:
+			active_panel = "craft"
+
+func _begin_action_touch(touch_id: int, pos: Vector2) -> void:
+	var size := get_viewport_rect().size
+	if pos.distance_to(_menu_button_center(size, 0)) < 27.0:
+		active_panel = "inventory"
+		return
+	if pos.distance_to(_menu_button_center(size, 1)) < 27.0:
+		active_panel = "craft"
+		return
+	if context_action != "" and pos.distance_to(_context_rune_position()) < 38.0:
+		_perform_context_action()
+		return
+	action_touch_id = touch_id
+	action_touch_origin = pos
+	action_touch_current = pos
+	action_hold_time = 0.0
+	radial_open = false
+	radial_choice = ""
+	queue_redraw()
+
+func _end_action_touch(pos: Vector2) -> void:
+	if radial_open:
+		_update_radial_choice(pos)
+		_commit_radial_choice()
+	else:
+		var drag := pos - action_touch_origin
+		if drag.length() > 34.0:
+			if absf(drag.y) > absf(drag.x):
+				if drag.y < 0.0:
+					jump_requested = true
+				else:
+					_use_selected_item()
+			else:
+				_perform_context_action()
+		else:
+			attack_requested = true
+			_flash_control("attack")
+	action_touch_id = -1
+	action_mouse_down = false
+	action_hold_time = 0.0
+	radial_open = false
+	radial_choice = ""
+	queue_redraw()
+
+func _open_item_wheel() -> void:
+	radial_items.clear()
+	for item in inventory.keys():
+		if int(inventory[item]) > 0:
+			radial_items.append(str(item))
+	radial_open = true
+	_update_radial_choice(action_touch_current)
+	queue_redraw()
+
+func _update_radial_choice(pos: Vector2) -> void:
+	var delta := pos - action_touch_origin
+	if delta.length() < 24.0:
+		radial_choice = ""
+		return
+	var angle := fposmod(atan2(delta.y, delta.x) + PI * 0.5 + TAU, TAU)
+	var index := int(floor((angle + PI / 8.0) / (TAU / 8.0))) % 8
+	var actions := ["attack", "use", "inventory", "craft", "checkpoint", "interact", "jump", "item"]
+	if index == 7 and not radial_items.is_empty():
+		var slot := clampi(int(floor(float(radial_items.size()) * 0.5)), 0, radial_items.size() - 1)
+		radial_choice = radial_items[slot]
+	else:
+		radial_choice = actions[index]
+
+func _commit_radial_choice() -> void:
+	match radial_choice:
+		"attack":
+			attack_requested = true
+		"jump":
+			jump_requested = true
+		"use":
+			_use_selected_item()
+		"interact":
+			_perform_context_action()
+		"inventory":
+			active_panel = "inventory"
+		"craft":
+			active_panel = "craft"
+		"checkpoint":
+			_set_checkpoint()
+		_:
+			if inventory.has(radial_choice):
+				selected_item = radial_choice
+				message = "Selected: " + selected_item
+				message_timer = 1.2
+
+func _perform_context_action() -> void:
+	if context_action == "enemy":
+		attack_requested = true
+	elif context_action == "tree" or context_action == "resource":
+		mine_requested = true
+	else:
+		message = "Move beside a tree or resource"
+		message_timer = 1.0
+
+func _menu_button_center(size: Vector2, index: int) -> Vector2:
+	return Vector2(size.x - 48.0 - float(index) * 58.0, 42.0)
+
+func _context_rune_position() -> Vector2:
+	return Vector2(player.x - camera_offset.x + float(facing) * 43.0 * CAMERA_ZOOM, player.y - camera_offset.y - 58.0 * CAMERA_ZOOM)
 
 func _update_joystick_axis() -> void:
 	var delta := joystick_current.x - joystick_origin.x
@@ -1241,40 +1379,23 @@ func _draw_slimes() -> void:
 			draw_rect(Rect2(bar_position + Vector2(float(segment) * 12.0, 0.0), Vector2(10.0, 3.0)), segment_color, true)
 
 func _draw_hud(size: Vector2) -> void:
-	draw_rect(Rect2(16, 16, 350, 178), Color(0.055, 0.08, 0.10, 0.84))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 42), "DEEPWILD", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.91, 0.83, 0.57))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 65), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+	# Minimal exploration HUD; full resource counts live in the inventory panel.
 	var hp_ratio := clampf(float(health) / 100.0, 0.0, 1.0)
-	var hp_color := Color(0.84, 0.25, 0.26)
-	if health > 60:
-		hp_color = Color(0.28, 0.78, 0.48)
-	elif health > 25:
-		hp_color = Color(0.94, 0.63, 0.24)
-	draw_rect(Rect2(60, 50, 154, 19), Color(0.035, 0.045, 0.055, 0.95))
-	draw_rect(Rect2(64, 54, 146, 11), Color(0.22, 0.12, 0.14))
-	draw_rect(Rect2(64, 54, 146.0 * hp_ratio, 11), hp_color)
-	for segment in range(1, 5):
-		var divider_x := 64.0 + float(segment) * 29.2
-		draw_line(Vector2(divider_x, 54), Vector2(divider_x, 65), Color(0.035, 0.045, 0.055, 0.58), 1.0)
-	draw_rect(Rect2(60, 50, 154, 19), Color(0.72, 0.82, 0.76, 0.55), false, 1.0)
-	draw_string(ThemeDB.fallback_font, Vector2(220, 64), "%d%%" % int(round(hp_ratio * 100.0)), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.95, 0.96, 0.88))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d STONE %d COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  STONE BLK %d" % [inventory["Planks"], inventory["Stone Block"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 145), "PICK %d  AXE %d  FIRE %d" % [inventory["Stone Pickaxe"], inventory["Stone Axe"], inventory["Campfire"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 184), "ESSENCE %d  SALVE %d" % [inventory["Wild Essence"], inventory["Healing Salve"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 165), "Campfires restore 5 HP every 3 seconds nearby", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.75, 0.42))
-	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
-	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
-	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 68), "SLIMES %d/3" % slimes.size(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(0.70, 1.0, 0.75))
-	if selected_item != "":
-		draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 105), "SELECTED: %s x%d" % [selected_item.to_upper(), int(inventory.get(selected_item, 0))], HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, Color(0.98, 0.83, 0.49))
-	var hit_status := "HIT READY" if attack_cooldown <= 0.0 else "HIT RECOVERY %.1fs" % attack_cooldown
-	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 86), hit_status, HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, Color(0.96, 0.78, 0.55) if attack_cooldown > 0.0 else Color(0.80, 0.95, 0.80))
+	var hp_color := Color(0.28, 0.78, 0.48) if health > 60 else (Color(0.94, 0.63, 0.24) if health > 25 else Color(0.84, 0.25, 0.26))
+	draw_rect(Rect2(16, 16, 194, 52), Color(0.025, 0.05, 0.06, 0.54), true, 10.0)
+	draw_arc(Vector2(37, 38), 12.0, 0.0, TAU, 24, Color(0.88, 0.76, 0.47, 0.9), 1.5, true)
+	draw_string(ThemeDB.fallback_font, Vector2(33, 43), "✦", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.98, 0.87, 0.59))
+	draw_rect(Rect2(56, 28, 136, 12), Color(0.01, 0.025, 0.03, 0.88), true, 5.0)
+	draw_rect(Rect2(58, 30, 132.0 * hp_ratio, 8), hp_color, true, 4.0)
+	draw_string(ThemeDB.fallback_font, Vector2(57, 56), "%d HP" % health, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.90, 0.95, 0.88))
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d" % day_count, HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color(0.98, 0.88, 0.63))
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 48), biome_at(int(player.x / TILE)).to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, Color(0.81, 0.91, 0.83))
+	if selected_item != "" and int(inventory.get(selected_item, 0)) > 0:
+		draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 67), "%s ×%d" % [selected_item.to_upper(), int(inventory[selected_item])], HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, Color(0.98, 0.83, 0.49))
 	if message_timer > 0.0:
-		var width := minf(size.x - 40.0, 510.0)
-		draw_rect(Rect2((size.x - width) * 0.5, 34, width, 38), Color(0.05, 0.07, 0.08, 0.82))
-		draw_string(ThemeDB.fallback_font, Vector2(size.x * 0.5, 59), message, HORIZONTAL_ALIGNMENT_CENTER, width - 16, 16, Color(1.0, 0.91, 0.69))
+		var width := minf(size.x - 40.0, 440.0)
+		draw_rect(Rect2((size.x - width) * 0.5, 24, width, 32), Color(0.025, 0.05, 0.06, 0.78), true, 8.0)
+		draw_string(ThemeDB.fallback_font, Vector2(size.x * 0.5, 45), message, HORIZONTAL_ALIGNMENT_CENTER, width - 18, 14, Color(1.0, 0.91, 0.69))
 
 func _handle_panel_touch(pos: Vector2) -> void:
 	var size := get_viewport_rect().size
@@ -1370,88 +1491,116 @@ func _recipe_requirements(recipe: String) -> Array[String]:
 	return ["No recipe data"]
 
 func _draw_controls(size: Vector2) -> void:
-	# Floating joystick appears beneath the left thumb instead of forcing a fixed touch point.
+	# Floating left-hand movement pad fades when idle.
 	var center := _joystick_center(size)
 	var active := joystick_id != -1 or mouse_joystick
 	if active:
 		center = joystick_origin
-	draw_circle(center, 57.0, Color(0.025, 0.045, 0.055, 0.48))
-	draw_arc(center, 51.0, 0.0, TAU, 48, Color(0.55, 0.72, 0.72, 0.38), 2.0, true)
-	draw_circle(center, 35.0, Color(0.16, 0.24, 0.26, 0.72))
-	draw_arc(center, 34.0, 0.0, TAU, 36, Color(0.69, 0.80, 0.76, 0.34), 1.5, true)
-	for tick in range(JOYSTICK_TICK_DIRECTIONS.size()):
-		var direction: Vector2 = JOYSTICK_TICK_DIRECTIONS[tick]
-		var inner := center + direction * 43.0
-		var outer := center + direction * 48.0
-		draw_line(inner, outer, Color(0.72, 0.84, 0.79, 0.45), 2.0)
+	var alpha := 0.62 if active else 0.27
+	draw_circle(center, 49.0, Color(0.035, 0.07, 0.08, alpha))
+	draw_arc(center, 45.0, 0.0, TAU, 48, Color(0.45, 0.84, 0.77, alpha), 2.0, true)
 	var knob := center
 	if active:
 		var drag := joystick_current - joystick_origin
-		drag.x = clampf(drag.x, -30.0, 30.0)
-		drag.y = clampf(drag.y, -30.0, 30.0)
+		drag.x = clampf(drag.x, -25.0, 25.0)
+		drag.y = clampf(drag.y, -25.0, 25.0)
 		knob += drag
-	draw_circle(knob + Vector2(0, 3), 22.0, Color(0.0, 0.0, 0.0, 0.25))
-	draw_circle(knob, 21.0, Color(0.66, 0.83, 0.77, 0.88))
-	draw_arc(knob, 16.0, 3.4, 6.0, 20, Color(0.93, 1.0, 0.92, 0.58), 1.5, true)
+	draw_circle(knob + Vector2(0, 3), 19.0, Color(0, 0, 0, 0.20))
+	draw_circle(knob, 17.0, Color(0.29, 0.66, 0.59, 0.76 if active else 0.38))
+	draw_arc(knob, 13.0, 3.4, 6.0, 20, Color(0.86, 1.0, 0.88, 0.62), 1.5, true)
 
-	# Three primary actions form one compact cluster, with different silhouettes.
-	_draw_action_button(_main_button_center(size, 0), "JUMP", Color(0.22, 0.56, 0.78), 39.0, "jump")
-	var hit_color := Color(0.78, 0.25, 0.23) if attack_cooldown <= 0.0 else Color(0.36, 0.39, 0.40)
-	_draw_action_button(_main_button_center(size, 1), "HIT", hit_color, 44.0, "hit")
-	_draw_action_button(_main_button_center(size, 2), "MINE", Color(0.68, 0.49, 0.23), 36.0, "mine")
+	# One large ancient rune replaces the seven-button cluster.
+	var rune := _main_button_center(size, 1)
+	var pressed := action_touch_id != -1 or action_mouse_down
+	draw_circle(rune + Vector2(0, 5), 48.0, Color(0, 0, 0, 0.24))
+	draw_circle(rune, 46.0, Color(0.025, 0.055, 0.06, 0.50 if pressed else 0.30))
+	draw_arc(rune, 43.0, 0.0, TAU, 64, Color(0.42, 0.88, 0.77, 0.82 if pressed else 0.50), 2.0, true)
+	draw_arc(rune, 35.0, 0.0, TAU, 8, Color(0.86, 0.69, 0.39, 0.72), 1.5, true)
+	for i in range(8):
+		var angle := float(i) * TAU / 8.0 - PI * 0.5
+		var direction := Vector2(cos(angle), sin(angle))
+		draw_line(rune + direction * 36.0, rune + direction * 40.0, Color(0.81, 0.91, 0.76, 0.82), 2.0)
+	draw_colored_polygon(PackedVector2Array([rune + Vector2(0, -19), rune + Vector2(7, -2), rune + Vector2(2, 2), rune + Vector2(4, 17), rune + Vector2(-4, 17), rune + Vector2(-2, 2), rune + Vector2(-7, -2)]), Color(0.95, 0.88, 0.65, 0.90))
+	for p in [Vector2(0, 25), Vector2(25, 0), Vector2(0, -25), Vector2(-25, 0)]:
+		draw_circle(rune + p, 2.5, Color(0.47, 0.94, 0.78, 0.85))
+	_draw_menu_sigil(_menu_button_center(size, 0), "bag", Color(0.43, 0.82, 0.59))
+	_draw_menu_sigil(_menu_button_center(size, 1), "craft", Color(0.63, 0.78, 0.87))
+	if context_action != "" and active_panel == "":
+		_draw_context_rune(_context_rune_position(), context_action)
+	if radial_open:
+		_draw_item_wheel()
 
-	# Utility actions stay small and readable; the last one marks a respawn checkpoint.
-	_draw_utility_chip(_utility_button_center(size, 0), "BAG", Color(0.29, 0.62, 0.43))
-	_draw_utility_chip(_utility_button_center(size, 1), "CRAFT", Color(0.42, 0.53, 0.61))
-	_draw_utility_chip(_utility_button_center(size, 2), "USE", Color(0.76, 0.48, 0.25))
-	_draw_utility_chip(_utility_button_center(size, 3), "POINT", Color(0.40, 0.63, 0.43))
+func _update_context_hint() -> void:
+	context_action = ""
+	var player_tile := int(floor(player.x / TILE))
+	var target := player_tile + facing
+	if target >= 0 and target < WORLD_WIDTH and _tree_exists(target):
+		if absf(float(target * TILE + TILE / 2) - player.x) <= TILE * 1.6 and absf(_ground_surface_y(target) - _ground_surface_y(player_tile)) <= TILE * 1.5:
+			context_action = "tree"
+			return
+	var tx := int(floor((player.x + float(facing) * 42.0) / TILE))
+	var ty := int(floor((player.y + 10.0) / TILE))
+	for cell in [Vector2i(tx, ty), Vector2i(tx, ty - 1), Vector2i(tx, ty + 1)]:
+		var kind := block_type(cell.x, cell.y)
+		if kind != "" and kind != "bedrock":
+			context_action = "resource"
+			return
+	for slime in slimes:
+		if absf(slime.x - player.x) < 74.0 and absf(slime.y - player.y) < 54.0:
+			context_action = "enemy"
+			return
+
+func _draw_context_rune(center: Vector2, kind: String) -> void:
+	var accent := Color(0.47, 0.91, 0.71)
+	if kind == "enemy":
+		accent = Color(1.0, 0.47, 0.35)
+	elif kind == "resource":
+		accent = Color(0.83, 0.77, 0.48)
+	draw_circle(center, 17.0, Color(0.02, 0.05, 0.06, 0.62))
+	draw_arc(center, 15.0, 0.0, TAU, 24, accent, 2.0, true)
+	if kind == "tree":
+		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -9), center + Vector2(-7, 0), center + Vector2(-3, 0), center + Vector2(-3, 7), center + Vector2(3, 7), center + Vector2(3, 0), center + Vector2(7, 0)]), accent)
+	elif kind == "enemy":
+		draw_line(center + Vector2(-6, -6), center + Vector2(6, 6), accent, 3.0)
+		draw_line(center + Vector2(6, -6), center + Vector2(-6, 6), accent, 3.0)
+	else:
+		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -8), center + Vector2(7, 0), center + Vector2(0, 8), center + Vector2(-7, 0)]), accent)
+
+func _draw_menu_sigil(center: Vector2, kind: String, accent: Color) -> void:
+	draw_circle(center, 22.0, Color(0.025, 0.055, 0.06, 0.56))
+	draw_arc(center, 20.0, 0.0, TAU, 32, accent, 1.5, true)
+	if kind == "bag":
+		draw_rect(Rect2(center + Vector2(-7, -4), Vector2(14, 13)), accent, false, 2.0)
+		draw_arc(center + Vector2(0, -4), 5.0, PI, TAU, 12, accent, 2.0, true)
+	else:
+		draw_line(center + Vector2(-8, -6), center + Vector2(8, -6), accent, 2.0)
+		draw_line(center + Vector2(-6, -1), center + Vector2(6, -1), accent, 2.0)
+		draw_line(center + Vector2(-4, 4), center + Vector2(4, 4), accent, 2.0)
+
+func _draw_item_wheel() -> void:
+	var center := action_touch_origin
+	draw_circle(center, 116.0, Color(0.015, 0.035, 0.04, 0.86))
+	draw_arc(center, 112.0, 0.0, TAU, 64, Color(0.47, 0.85, 0.72, 0.86), 2.0, true)
+	var labels := ["HIT", "USE", "BAG", "CRAFT", "CHECK", "ACT", "JUMP", "ITEM"]
+	var actions := ["attack", "use", "inventory", "craft", "checkpoint", "interact", "jump", "item"]
+	for i in range(8):
+		var angle := float(i) * TAU / 8.0 - PI * 0.5
+		var p := center + Vector2(cos(angle), sin(angle)) * 76.0
+		var selected := actions[i] == radial_choice or (actions[i] == "item" and inventory.has(radial_choice))
+		draw_circle(p, 25.0, Color(0.16, 0.33, 0.28, 0.96) if selected else Color(0.06, 0.12, 0.13, 0.94))
+		draw_arc(p, 23.0, 0.0, TAU, 24, Color(0.92, 0.76, 0.46, 0.92) if selected else Color(0.44, 0.68, 0.61, 0.78), 1.5, true)
+		var label := labels[i]
+		if actions[i] == "item" and not radial_items.is_empty():
+			label = str(radial_items[clampi(int(floor(float(radial_items.size()) * 0.5)), 0, radial_items.size() - 1)]).substr(0, 5).to_upper()
+		draw_string(ThemeDB.fallback_font, p + Vector2(0, 4), label, HORIZONTAL_ALIGNMENT_CENTER, 46.0, 8, Color(0.94, 0.96, 0.85))
+	draw_circle(center, 22.0, Color(0.12, 0.24, 0.22, 0.98))
+	draw_arc(center, 20.0, 0.0, TAU, 24, Color(0.76, 0.91, 0.76), 1.5, true)
 
 func _joystick_center(size: Vector2) -> Vector2:
-	return Vector2(91.0, size.y - 92.0)
+	return Vector2(82.0, size.y - 82.0)
 
 func _main_button_center(size: Vector2, index: int) -> Vector2:
-	var anchor := Vector2(size.x - 92.0, size.y - 91.0)
-	if index == 0:
-		return anchor + Vector2(-65.0, -66.0)
-	if index == 1:
-		return anchor
-	return anchor + Vector2(-76.0, 12.0)
-
-func _utility_button_center(size: Vector2, index: int) -> Vector2:
-	var step := clampf(size.y * 0.115, 39.0, 48.0)
-	return Vector2(size.x - 63.0, size.y * 0.24 + float(index) * step)
-
-func _draw_action_button(center: Vector2, label: String, color: Color, radius: float, kind: String) -> void:
-	var pressed_strength := clampf(pressed_action_timer / 0.16, 0.0, 1.0) if pressed_action == kind else 0.0
-	var visual_radius := radius - 3.0 * pressed_strength
-	var visual_center := center + Vector2(0.0, 2.0 * pressed_strength)
-	draw_circle(center + Vector2(0, 4), radius + 4.0, Color(0.0, 0.0, 0.0, 0.32))
-	draw_circle(visual_center, visual_radius + 2.0, Color(0.76, 0.88, 0.82, lerpf(0.20, 0.28, pressed_strength)))
-	draw_circle(visual_center, visual_radius, Color(0.055, 0.085, 0.09, 0.90))
-	draw_circle(visual_center, visual_radius - 4.0, color.darkened(0.28).lerp(color.lightened(0.12), pressed_strength * 0.65))
-	draw_arc(visual_center, visual_radius - 5.0, -2.55, -0.55, 18, color.lightened(lerpf(0.25, 0.35, pressed_strength)), 2.0, true)
-	if kind == "jump":
-		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -17), center + Vector2(-10, -4), center + Vector2(-4, -4), center + Vector2(-4, 7), center + Vector2(4, 7), center + Vector2(4, -4), center + Vector2(10, -4)]), Color(0.93, 0.98, 0.98))
-	elif kind == "hit":
-		draw_line(center + Vector2(-11, -12), center + Vector2(10, 9), Color(1.0, 0.95, 0.83), 5.0)
-		draw_line(center + Vector2(-4, -15), center + Vector2(14, 3), Color(1.0, 0.95, 0.83), 2.0)
-		draw_line(center + Vector2(-15, 8), center + Vector2(-8, 1), Color(1.0, 0.86, 0.63), 2.0)
-	else:
-		draw_rect(Rect2(center.x - 10, center.y - 13, 20, 22), Color(0.94, 0.88, 0.72), false, 2.5)
-		draw_line(center + Vector2(-7, -7), center + Vector2(7, -7), Color(0.94, 0.88, 0.72), 2.0)
-		draw_line(center + Vector2(-7, 0), center + Vector2(4, 0), Color(0.94, 0.88, 0.72), 2.0)
-	draw_string(ThemeDB.fallback_font, center + Vector2(0, radius - 7.0), label, HORIZONTAL_ALIGNMENT_CENTER, radius * 2.2, 10, Color(0.96, 0.98, 0.94))
-
-func _draw_utility_chip(center: Vector2, label: String, accent: Color) -> void:
-	var pressed_strength := clampf(pressed_action_timer / 0.16, 0.0, 1.0) if pressed_action == label.to_lower() else 0.0
-	var rect := Rect2(center.x - 49.0, center.y - 16.0, 98.0, 32.0)
-	var visual_rect := rect.grow(-2.0 * pressed_strength)
-	var base_color := Color(0.035, 0.065, 0.07, 0.78)
-	var pressed_color := Color(0.09, 0.14, 0.13, 0.94)
-	draw_rect(rect.grow(2.0), Color(0.0, 0.0, 0.0, 0.25), true, 8.0)
-	draw_rect(visual_rect, base_color.lerp(pressed_color, pressed_strength), true, 8.0)
-	draw_rect(Rect2(visual_rect.position.x + 4.0, visual_rect.position.y + 5.0, 3.0, visual_rect.size.y - 10.0), accent.lerp(accent.lightened(0.25), pressed_strength), true, 2.0)
-	draw_string(ThemeDB.fallback_font, center + Vector2(4.0, 4.0), label, HORIZONTAL_ALIGNMENT_CENTER, 86.0, 11, Color(0.91, 0.95, 0.90).lerp(Color(1.0, 1.0, 0.92), pressed_strength))
+	return Vector2(size.x - 82.0, size.y - 82.0)
 
 func _save_world() -> void:
 	var data := {"save_version": 2, "world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "checkpoint_tile": checkpoint_tile, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slime_health": slime_health, "slimes": []}
