@@ -1204,7 +1204,7 @@ func _draw_utility_chip(center: Vector2, label: String, accent: Color) -> void:
 	draw_string(ThemeDB.fallback_font, center + Vector2(4.0, 4.0), label, HORIZONTAL_ALIGNMENT_CENTER, 86.0, 11, Color(0.91, 0.95, 0.90).lerp(Color(1.0, 1.0, 0.92), pressed_strength))
 
 func _save_world() -> void:
-	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "checkpoint_tile": checkpoint_tile, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
+	var data := {"save_version": 2, "world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "checkpoint_tile": checkpoint_tile, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
 	for slime in slimes:
 		data["slimes"].append([slime.x, slime.y])
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -1237,7 +1237,12 @@ func _load_world() -> void:
 	harvested_trees = parsed.get("harvested_trees", {})
 	tree_health = parsed.get("tree_health", {})
 	placed_objects = parsed.get("placed_objects", {})
-	craft_recipe_index = clampi(int(parsed.get("craft_recipe_index", 0)), 0, RECIPES.size() - 1)
+	var saved_recipe_index := int(parsed.get("craft_recipe_index", 0))
+	# Save version 1 used index 4 for Campfire and 5 for Healing Salve.
+	# Stone Axe was inserted at index 4 in version 2, so migrate old saves.
+	if int(parsed.get("save_version", 1)) < 2 and saved_recipe_index >= 4:
+		saved_recipe_index += 1
+	craft_recipe_index = clampi(saved_recipe_index, 0, RECIPES.size() - 1)
 	slimes.clear()
 	for item in parsed.get("slimes", []):
 		if item is Array and item.size() >= 2:
