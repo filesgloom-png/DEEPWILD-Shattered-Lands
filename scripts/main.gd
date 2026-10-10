@@ -818,10 +818,12 @@ func _draw_world(size: Vector2) -> void:
 		var surface := int(round(ground_y_at(tx)))
 		var px := float(tx * TILE) - camera_offset.x
 		for ty in range(start_y, end_y):
-			var kind := block_type(tx, ty)
 			var py := float(ty * TILE) - camera_offset.y
 			if py < -TILE or py > size.y + TILE:
 				continue
+			# Resolve terrain only after the viewport check; this avoids cache lookups
+			# and terrain generation work for candidate rows outside the visible area.
+			var kind := block_type(tx, ty)
 			# Cave voids are dark, not transparent holes showing the sky behind the world.
 			if kind == "":
 				if ty > surface + 5 and ty < WORLD_DEPTH - 4:
