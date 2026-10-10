@@ -9,6 +9,17 @@ const WORLD_DEPTH := 46
 const GRAVITY := 1150.0
 const WALK_SPEED := 255.0
 const JUMP_SPEED := -455.0
+# Fixed unit directions for the joystick bezel; avoid per-frame trigonometry.
+const JOYSTICK_TICK_DIRECTIONS := [
+	Vector2(1.0, 0.0),
+	Vector2(0.7071067812, 0.7071067812),
+	Vector2(0.0, 1.0),
+	Vector2(-0.7071067812, 0.7071067812),
+	Vector2(-1.0, 0.0),
+	Vector2(-0.7071067812, -0.7071067812),
+	Vector2(0.0, -1.0),
+	Vector2(0.7071067812, -0.7071067812)
+]
 const SAVE_PATH := "user://deepwild_save.json"
 # Immutable world-render palette: avoid rebuilding these colors on every frame.
 const CAVE_VOID_COLOR := Color(0.045, 0.055, 0.075)
@@ -1064,10 +1075,8 @@ func _draw_controls(size: Vector2) -> void:
 	draw_arc(center, 51.0, 0.0, TAU, 48, Color(0.55, 0.72, 0.72, 0.38), 2.0, true)
 	draw_circle(center, 35.0, Color(0.16, 0.24, 0.26, 0.72))
 	draw_arc(center, 34.0, 0.0, TAU, 36, Color(0.69, 0.80, 0.76, 0.34), 1.5, true)
-	for tick in range(8):
-		var angle := float(tick) * TAU / 8.0
-		# Reuse the same direction vector for both endpoints of each joystick tick.
-		var direction := Vector2(cos(angle), sin(angle))
+	for tick in range(JOYSTICK_TICK_DIRECTIONS.size()):
+		var direction: Vector2 = JOYSTICK_TICK_DIRECTIONS[tick]
 		var inner := center + direction * 43.0
 		var outer := center + direction * 48.0
 		draw_line(inner, outer, Color(0.72, 0.84, 0.79, 0.45), 2.0)
