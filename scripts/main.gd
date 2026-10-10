@@ -982,6 +982,10 @@ func _draw_effects() -> void:
 	if impact_timer <= 0.0:
 		return
 	var p := impact_position - camera_offset
+	var viewport_size := get_viewport_rect().size
+	# All impact variants fit inside this generous screen-space bound; skip fully invisible effects.
+	if p.x + 40.0 < 0.0 or p.x - 40.0 > viewport_size.x or p.y + 50.0 < 0.0 or p.y - 50.0 > viewport_size.y:
+		return
 	var strength := clampf(impact_timer / 0.26, 0.0, 1.0)
 	if impact_kind == "damage":
 		var pulse := 1.0 - strength
