@@ -84,6 +84,9 @@ var camera_offset := Vector2.ZERO
 var on_ground := false
 var facing := 1
 var move_axis := 0.0
+var walk_animation_time := 0.0
+var player_was_moving := false
+const CAMERA_ZOOM := 1.22
 var joystick_id := -1
 var joystick_origin := Vector2.ZERO
 var joystick_current := Vector2.ZERO
@@ -187,9 +190,14 @@ func _update_player(delta: float) -> void:
 	var keyboard_axis := Input.get_axis("ui_left", "ui_right")
 	if absf(keyboard_axis) > 0.1:
 		move_axis = keyboard_axis
-	velocity.x = move_axis * WALK_SPEED
+	var target_speed := move_axis * WALK_SPEED
+	var horizontal_response := 1850.0 if absf(move_axis) > 0.1 else 2350.0
+	velocity.x = move_toward(velocity.x, target_speed, horizontal_response * delta)
 	if absf(move_axis) > 0.1:
 		facing = 1 if move_axis > 0.0 else -1
+		walk_animation_time += delta * (9.0 if absf(velocity.x) > WALK_SPEED * 0.7 else 6.0)
+	else:
+		walk_animation_time = fposmod(walk_animation_time, TAU)
 	velocity.y += GRAVITY * delta
 	player += velocity * delta
 	var ground := _ground_surface_y(int(floor(player.x / TILE)))
@@ -789,10 +797,14 @@ func _draw() -> void:
 	var sky := Color(0.12, 0.18, 0.31).lerp(Color(0.38, 0.68, 0.88), sun)
 	draw_rect(Rect2(Vector2.ZERO, size), sky)
 	_draw_scenery(size, sun)
+	# Zoom the gameplay layer around the screen center while keeping HUD and touch controls fixed.
+	var zoom_origin := size * (0.5 - CAMERA_ZOOM * 0.5)
+	draw_set_transform(zoom_origin, 0.0, Vector2(CAMERA_ZOOM, CAMERA_ZOOM))
 	_draw_world(size)
 	_draw_player()
 	_draw_slimes()
 	_draw_effects()
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	_draw_hud(size)
 	_draw_controls(size)
 
@@ -1081,10 +1093,18 @@ func _draw_tree(x: float, y: float) -> void:
 
 func _draw_player() -> void:
 	var p := player - camera_offset
-	# Draw a single crisp pixel-art sprite; horizontal mirroring follows movement.
-	# One atlas draw replaces many per-frame rectangles and keeps mobile rendering light.
-	draw_set_transform(p, 0.0, Vector2(float(facing), 1.0))
-	draw_texture_rect_region(HERO_ATLAS, Rect2(-16, -48, 32, 48), Rect2(0, 0, 32, 48))
+	var moving := absf(velocity.x) > 18.0 and on_ground
+	var stride := sin(walk_animation_time) if moving else 0.0
+	var bob := absf(stride) * 1.5 if moving else 0.0
+	# Keep the pixel-art silhouette crisp; add a restrained step cycle and body bob.
+	draw_set_transform(p + Vector2(0.0, -bob), 0.0, Vector2(float(facing), 1.0))
+	draw_texture_rect_region(HERO_ATLAS, Rect2(-20, -60, 40, 60), Rect2(0, 0, 32, 48))
+	if moving:
+		# Animated boot pixels make the stride readable instead of looking like ice-skating.
+		var rear_foot := Vector2(-5.0 + stride * 3.0, -3.0 + maxf(0.0, -stride) * 2.0)
+		var front_foot := Vector2(5.0 - stride * 3.0, -3.0 + maxf(0.0, stride) * 2.0)
+		draw_rect(Rect2(rear_foot.x - 3.0, rear_foot.y - 2.0, 6.0, 3.0), Color(0.09, 0.14, 0.16), true)
+		draw_rect(Rect2(front_foot.x - 3.0, front_foot.y - 2.0, 6.0, 3.0), Color(0.09, 0.14, 0.16), true)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_effects() -> void:
