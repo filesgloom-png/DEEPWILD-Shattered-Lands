@@ -763,6 +763,9 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 	for i in range(5):
 		var cx := fposmod(float(i * 287) - camera_offset.x * 0.035 + 80.0, size.x + 240.0) - 120.0
 		var cy := 105.0 + float((i * 29) % 90) - camera_offset.y * 0.015 + float((i % 3) - 1) * 5.0
+		# Cloud silhouettes extend about 25 px vertically; skip fully off-screen clusters.
+		if cy < -28.0 or cy > size.y + 28.0:
+			continue
 		# Small deterministic opacity differences make the cloud layer feel less repeated.
 		var cloud_alpha := (0.25 + float(i % 3) * 0.025) if sun > 0.3 else (0.10 + float(i % 3) * 0.01)
 		var cloud := CLOUD_BASE_COLOR
