@@ -790,6 +790,9 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		for i in range(3):
 			var bird_x := fposmod(float(i * 211 + 37) + day_time * 95.0 - camera_offset.x * 0.025, size.x + 80.0) - 40.0
 			var bird_y := size.y * 0.22 + float(i * 13) + sin(day_time * 1.4 + float(i)) * 4.0
+			# Bird silhouettes span only 10 px; skip strokes when fully off-screen.
+			if bird_x + 5.0 < 0.0 or bird_x - 5.0 > size.x or bird_y + 2.0 < 0.0 or bird_y - 1.0 > size.y:
+				continue
 			draw_line(Vector2(bird_x - 5.0, bird_y), Vector2(bird_x, bird_y + 2.0), wing_color, 1.5)
 			draw_line(Vector2(bird_x, bird_y + 2.0), Vector2(bird_x + 5.0, bird_y), wing_color, 1.5)
 	var celestial := CELESTIAL_NIGHT_COLOR.lerp(CELESTIAL_DAY_COLOR, sun)
