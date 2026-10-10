@@ -1010,6 +1010,7 @@ func _draw_world(size: Vector2) -> void:
 			elif kind == "bedrock":
 				atlas_index = 9
 			draw_texture_rect_region(TERRAIN_ATLAS, Rect2(px, py, TILE, TILE), Rect2(atlas_index * TILE, 0, TILE, TILE))
+			_draw_terrain_variation(px, py, tx, ty, kind, surface, flora_seed_offset)
 			# Crisp biome-tinted surface edging adds tile definition with only two lightweight strokes.
 			if ty == surface:
 				var edge_color := GRASS_EDGE_COLOR
@@ -1054,6 +1055,65 @@ func _draw_world(size: Vector2) -> void:
 						draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), CAMPFIRE_CORE_COLOR)
 	
 	# Seed offset is computed once per frame in _draw_world, not per plant.
+func _draw_terrain_variation(px: float, py: float, tx: int, ty: int, kind: String, surface: int, seed_offset: int) -> void:
+	# Tiny deterministic accents break up repeated atlas tiles without introducing noise or per-frame randomness.
+	var mark := posmod(tx * 37 + ty * 19 + seed_offset * 13, 11)
+	if kind == "grass":
+		if mark == 1:
+			draw_rect(Rect2(px + 4.0, py + 10.0, 3.0, 1.0), Color(0.66, 0.48, 0.31, 0.85))
+			draw_rect(Rect2(px + 17.0, py + 16.0, 2.0, 2.0), Color(0.34, 0.23, 0.18, 0.8))
+		elif mark == 5:
+			draw_rect(Rect2(px + 11.0, py + 12.0, 2.0, 1.0), Color(0.80, 0.59, 0.37, 0.75))
+	elif kind == "dirt":
+		if mark == 2:
+			draw_rect(Rect2(px + 3.0, py + 5.0, 3.0, 1.0), Color(0.68, 0.47, 0.31, 0.75))
+			draw_rect(Rect2(px + 15.0, py + 17.0, 2.0, 2.0), Color(0.27, 0.18, 0.15, 0.65))
+		elif mark == 7:
+			draw_rect(Rect2(px + 9.0, py + 20.0, 4.0, 1.0), Color(0.59, 0.39, 0.28, 0.75))
+	elif kind == "stone" or kind == "bedrock":
+		if mark == 3:
+			draw_line(Vector2(px + 4.0, py + 7.0), Vector2(px + 8.0, py + 5.0), Color(0.70, 0.75, 0.78, 0.45), 1.0)
+		elif mark == 8:
+			draw_rect(Rect2(px + 16.0, py + 17.0, 3.0, 1.0), Color(0.10, 0.13, 0.17, 0.55))
+	elif kind == "sand":
+		if mark == 4:
+			draw_rect(Rect2(px + 4.0, py + 13.0, 2.0, 1.0), Color(0.98, 0.85, 0.57, 0.85))
+		elif mark == 9:
+			draw_rect(Rect2(px + 16.0, py + 18.0, 3.0, 1.0), Color(0.67, 0.52, 0.31, 0.65))
+	elif kind == "snow" or kind == "permafrost":
+		if mark == 2:
+			draw_rect(Rect2(px + 4.0, py + 10.0, 3.0, 1.0), Color(0.86, 0.96, 0.98, 0.75))
+		elif mark == 6:
+			draw_rect(Rect2(px + 17.0, py + 18.0, 2.0, 1.0), Color(0.29, 0.49, 0.58, 0.55))
+	elif kind == "sandstone":
+		if mark == 5:
+			draw_rect(Rect2(px + 5.0, py + 15.0, 4.0, 1.0), Color(0.86, 0.68, 0.43, 0.72))
+	elif kind == "copper_ore":
+		if mark == 4:
+			draw_rect(Rect2(px + 18.0, py + 4.0, 2.0, 2.0), Color(0.91, 0.60, 0.34, 0.85))
+	# At biome borders, soften the hard vertical seam with a few pixel-sized accents on the top layer.
+	if ty == surface:
+		var current_biome := biome_at(tx)
+		var left_biome := biome_at(tx - 1) if tx > 0 else current_biome
+		var right_biome := biome_at(tx + 1) if tx < WORLD_WIDTH - 1 else current_biome
+		if left_biome != current_biome:
+			_draw_biome_seam(px, py, current_biome, true, mark)
+		if right_biome != current_biome:
+			_draw_biome_seam(px, py, current_biome, false, mark)
+
+func _draw_biome_seam(px: float, py: float, biome: String, left_edge: bool, mark: int) -> void:
+	var edge_x := px + (0.0 if left_edge else TILE - 2.0)
+	var accent := Color(0.36, 0.63, 0.34, 0.85)
+	if biome == "desert":
+		accent = Color(0.91, 0.75, 0.46, 0.9)
+	elif biome == "snow":
+		accent = Color(0.84, 0.94, 0.98, 0.9)
+	if mark % 3 == 0:
+		draw_rect(Rect2(edge_x, py + 5.0, 2.0, 2.0), accent)
+		draw_rect(Rect2(edge_x + (1.0 if left_edge else -1.0), py + 8.0, 1.0, 2.0), accent.darkened(0.22))
+	else:
+		draw_rect(Rect2(edge_x, py + 6.0, 2.0, 1.0), accent)
+
 func _draw_ground_flora(x: float, y: float, biome: String, tx: int, flora_seed_offset: int) -> void:
 	# Deterministic, sparse surface plants: no nodes or per-frame allocations.
 	var mark := posmod(tx * 17 + flora_seed_offset, 19)

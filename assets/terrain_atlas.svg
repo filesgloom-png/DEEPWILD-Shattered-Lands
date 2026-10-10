@@ -23,5 +23,5 @@
 <!-- Planks -->
 <g transform="translate(192 0)"><rect width="24" height="24" fill="#80502d"/><path d="M0 1H24 M0 8H24 M0 16H24 M0 23H24" stroke="#c18a4c" stroke-width="1"/><path d="M8 2V7 M18 9V15 M5 17V22" stroke="#54331f" stroke-width="1"/><rect x="3" y="3" width="2" height="1" fill="#e0ae68"/><rect x="12" y="11" width="3" height="1" fill="#a16b3a"/></g>
 <!-- Bedrock -->
-<g transform="translate(216 0)"><rect width="24" height="24" fill="#222a35"/><path d="M0 4L6 2L10 5L15 1L24 4 M0 15L7 12L13 16L19 11L24 14" fill="none" stroke="#3c4654" stroke-width="2"/><rect x="4" y="8" width="3" height="2" fill="#171d27"/><rect x="17" y="19" width="4" height="2" fill="#4b5664"/><path d="M10 20L13 18" stroke="#65717c" stroke-width="1"/></g>
+<g transform="translate(216 0)"><rect width="24" height="24" fill="#222a35"/><path d="M0 4L6 2L10 5L15 1L24 4 M0 15L7 12L13 16L19 11L24 14" fill="none" stroke="#3c4654" stroke-width="2"/><rect x="4" y="8" width="3" height="2" fill="#171d27"/><rect x="17" y="19" width="4" height="2" fill="#4b5664"/><path d="M10 20L13 18" stroke="#65717c" stroke-width="1"/><rect x="2" y="21" width="4" height="1" fill="#313b49"/><rect x="13" y="7" width="2" height="1" fill="#495463"/></g>
 </svg>
