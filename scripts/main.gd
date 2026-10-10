@@ -630,6 +630,17 @@ func _open_item_wheel() -> void:
 	_update_radial_choice(action_touch_current)
 	queue_redraw()
 
+func _radial_item_index(delta: Vector2) -> int:
+	if radial_items.is_empty():
+		return -1
+	var angle := fposmod(atan2(delta.y, delta.x) + PI * 0.5 + TAU, TAU)
+	# The ITEM wedge is sector 7. Divide that wedge into item slots so
+	# different finger directions select different inventory entries.
+	var sector_start := TAU * 6.5 / 8.0
+	var local_angle := fposmod(angle - sector_start, TAU)
+	var fraction := clampf(local_angle / (TAU / 8.0), 0.0, 0.9999)
+	return clampi(int(floor(fraction * float(radial_items.size()))), 0, radial_items.size() - 1)
+
 func _update_radial_choice(pos: Vector2) -> void:
 	var delta := pos - action_touch_origin
 	if delta.length() < 24.0:
@@ -639,8 +650,7 @@ func _update_radial_choice(pos: Vector2) -> void:
 	var index := int(floor((angle + PI / 8.0) / (TAU / 8.0))) % 8
 	var actions := ["attack", "use", "inventory", "craft", "checkpoint", "interact", "jump", "item"]
 	if index == 7 and not radial_items.is_empty():
-		var slot := clampi(int(floor(float(radial_items.size()) * 0.5)), 0, radial_items.size() - 1)
-		radial_choice = radial_items[slot]
+		radial_choice = radial_items[_radial_item_index(delta)]
 	else:
 		radial_choice = actions[index]
 
@@ -1504,13 +1514,13 @@ func _update_context_hint() -> void:
 			return
 	var tx := int(floor((player.x + float(facing) * 42.0) / TILE))
 	var ty := int(floor((player.y + 10.0) / TILE))
-	for cell in [Vector2i(tx, ty), Vector2i(tx, ty - 1), Vector2i(tx, ty + 1)]:
+	for cell in [Vector2i(tx, ty), Vector2i(tx, ty - 1), Vector2i(tx, ty + 1), Vector2i(player_tile, ty)]:
 		var kind := block_type(cell.x, cell.y)
 		if kind != "" and kind != "bedrock":
 			context_action = "resource"
 			return
 	for slime in slimes:
-		if absf(slime.x - player.x) < 74.0 and absf(slime.y - player.y) < 54.0:
+		if absf(slime.x - (player.x + float(facing) * 28.0)) < 62.0 and absf(slime.y - player.y) < 65.0:
 			context_action = "enemy"
 			return
 
@@ -1555,7 +1565,10 @@ func _draw_item_wheel() -> void:
 		draw_arc(p, 23.0, 0.0, TAU, 24, Color(0.92, 0.76, 0.46, 0.92) if selected else Color(0.44, 0.68, 0.61, 0.78), 1.5, true)
 		var label: String = str(labels[i])
 		if actions[i] == "item" and not radial_items.is_empty():
-			label = str(radial_items[clampi(int(floor(float(radial_items.size()) * 0.5)), 0, radial_items.size() - 1)]).substr(0, 5).to_upper()
+			var item_slot := _radial_item_index(action_touch_current - action_touch_origin)
+			if item_slot < 0:
+				item_slot = 0
+			label = str(radial_items[item_slot]).substr(0, 5).to_upper()
 		draw_string(ThemeDB.fallback_font, p + Vector2(0, 4), label, HORIZONTAL_ALIGNMENT_CENTER, 46.0, 8, Color(0.94, 0.96, 0.85))
 	draw_circle(center, 22.0, Color(0.12, 0.24, 0.22, 0.98))
 	draw_arc(center, 20.0, 0.0, TAU, 24, Color(0.76, 0.91, 0.76), 1.5, true)
