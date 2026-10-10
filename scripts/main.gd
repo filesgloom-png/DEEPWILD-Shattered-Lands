@@ -505,6 +505,14 @@ func _attack() -> void:
 	message = "Swing!"
 	message_timer = 0.7
 
+func _show_panel(panel_name: String) -> void:
+	# Opening an overlay must stop movement immediately, including a held joystick.
+	active_panel = panel_name
+	joystick_id = -1
+	mouse_joystick = false
+	move_axis = 0.0
+	queue_redraw()
+
 func _input(event: InputEvent) -> void:
 	var size := get_viewport_rect().size
 	if event is InputEventScreenTouch:
@@ -575,9 +583,9 @@ func _input(event: InputEvent) -> void:
 		elif event.keycode == KEY_SPACE:
 			jump_requested = true
 		elif event.keycode == KEY_I:
-			active_panel = "inventory"
+			_show_panel("inventory")
 		elif event.keycode == KEY_C:
-			active_panel = "craft"
+			_show_panel("craft")
 
 func _begin_action_touch(touch_id: int, pos: Vector2) -> void:
 	if action_touch_id != -1:
@@ -586,13 +594,13 @@ func _begin_action_touch(touch_id: int, pos: Vector2) -> void:
 	if pos.distance_to(_menu_button_center(size, 0)) < 27.0:
 		if touch_id >= 0:
 			panel_touch_id = touch_id
-		active_panel = "inventory"
+		_show_panel("inventory")
 		queue_redraw()
 		return
 	if pos.distance_to(_menu_button_center(size, 1)) < 27.0:
 		if touch_id >= 0:
 			panel_touch_id = touch_id
-		active_panel = "craft"
+		_show_panel("craft")
 		queue_redraw()
 		return
 	if context_action != "" and pos.distance_to(_context_rune_position()) < 25.0:
