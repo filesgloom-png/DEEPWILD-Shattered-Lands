@@ -354,19 +354,26 @@ func _tree_exists(tx: int) -> bool:
 	return tx % 9 == 2
 
 func _chop_tree() -> bool:
+	# Tree harvesting requires the player to face a tree within true melee reach.
+	# Never search several tiles away: this was the source of remote tree chopping.
 	var player_tile := int(floor(player.x / TILE))
 	var target := player_tile + facing
-	var best_tile := -1
-	var best_distance := 999
-	for tx in range(maxi(0, player_tile - 2), mini(WORLD_WIDTH, player_tile + 3)):
-		if not _tree_exists(tx):
-			continue
-		var distance: int = absi(tx - target)
-		if distance < best_distance and distance <= 2:
-			best_distance = distance
-			best_tile = tx
-	if best_tile == -1:
+	if target < 0 or target >= WORLD_WIDTH or not _tree_exists(target):
+		message = "Face a tree and stand beside it"
+		message_timer = 1.4
 		return false
+	var tree_center_x := float(target * TILE) + TILE * 0.5
+	if absf(tree_center_x - player.x) > TILE * 1.6:
+		message = "Move closer to the tree"
+		message_timer = 1.4
+		return false
+	var player_ground := _ground_surface_y(player_tile)
+	var tree_ground := _ground_surface_y(target)
+	if absf(player_ground - tree_ground) > TILE * 1.5:
+		message = "The tree is out of reach"
+		message_timer = 1.4
+		return false
+	var best_tile := target
 	var key := str(best_tile)
 	var tree_damage := 2 if int(inventory.get("Stone Axe", 0)) > 0 else 1
 	var hp := int(tree_health.get(key, 3)) - tree_damage
