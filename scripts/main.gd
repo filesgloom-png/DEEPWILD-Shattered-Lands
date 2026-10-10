@@ -574,12 +574,20 @@ func _begin_action_touch(touch_id: int, pos: Vector2) -> void:
 	var size := get_viewport_rect().size
 	if pos.distance_to(_menu_button_center(size, 0)) < 27.0:
 		active_panel = "inventory"
+		queue_redraw()
 		return
 	if pos.distance_to(_menu_button_center(size, 1)) < 27.0:
 		active_panel = "craft"
+		queue_redraw()
 		return
-	if context_action != "" and pos.distance_to(_context_rune_position()) < 38.0:
+	if context_action != "" and pos.distance_to(_context_rune_position()) < 25.0:
 		_perform_context_action()
+		_flash_control(context_action)
+		return
+	# Only touches beginning on the visible main rune can start an action gesture.
+	# This keeps ordinary right-side screen drags from accidentally attacking or jumping.
+	var main_rune := _main_button_center(size, 1)
+	if pos.distance_to(main_rune) > 54.0:
 		return
 	action_touch_id = touch_id
 	action_touch_origin = pos
@@ -671,7 +679,10 @@ func _menu_button_center(size: Vector2, index: int) -> Vector2:
 	return Vector2(size.x - 48.0 - float(index) * 58.0, 42.0)
 
 func _context_rune_position() -> Vector2:
-	return Vector2(player.x - camera_offset.x + float(facing) * 43.0 * CAMERA_ZOOM, player.y - camera_offset.y - 58.0 * CAMERA_ZOOM)
+	var size := get_viewport_rect().size
+	var zoom_origin := size * (0.5 - CAMERA_ZOOM * 0.5)
+	var player_screen := zoom_origin + (player - camera_offset) * CAMERA_ZOOM
+	return player_screen + Vector2(float(facing) * 43.0 * CAMERA_ZOOM, -58.0 * CAMERA_ZOOM)
 
 func _update_joystick_axis() -> void:
 	var delta := joystick_current.x - joystick_origin.x
