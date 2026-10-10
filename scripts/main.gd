@@ -2,6 +2,7 @@ extends Node2D
 
 const TILE := 24
 const TERRAIN_ATLAS: Texture2D = preload("res://assets/terrain_atlas.svg")
+const CREATURE_ATLAS: Texture2D = preload("res://assets/creature_atlas.svg")
 const WORLD_WIDTH := 240
 const WORLD_DEPTH := 46
 const GRAVITY := 1150.0
@@ -676,26 +677,13 @@ func _draw_world(size: Vector2) -> void:
 				draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), Color(1.0, 0.78, 0.22))
 
 func _draw_cactus(x: float, y: float) -> void:
-	draw_rect(Rect2(x + 9, y - 45, 7, 45), Color(0.18, 0.49, 0.29))
-	draw_rect(Rect2(x + 1, y - 33, 8, 6), Color(0.21, 0.55, 0.32))
-	draw_rect(Rect2(x + 1, y - 41, 6, 14), Color(0.21, 0.55, 0.32))
-	draw_rect(Rect2(x + 16, y - 28, 7, 6), Color(0.21, 0.55, 0.32))
-	draw_rect(Rect2(x + 17, y - 37, 6, 15), Color(0.21, 0.55, 0.32))
+	draw_texture_rect_region(CREATURE_ATLAS, Rect2(x - 1, y - 120, 48, 120), Rect2(96, 0, 48, 120))
 
 func _draw_pine(x: float, y: float) -> void:
-	draw_rect(Rect2(x + 10, y - 62, 7, 62), Color(0.34, 0.25, 0.18))
-	draw_colored_polygon(PackedVector2Array([Vector2(x - 10, y - 28), Vector2(x + 13, y - 91), Vector2(x + 35, y - 28)]), Color(0.12, 0.34, 0.31))
-	draw_colored_polygon(PackedVector2Array([Vector2(x - 6, y - 48), Vector2(x + 13, y - 108), Vector2(x + 31, y - 48)]), Color(0.16, 0.43, 0.38))
+	draw_texture_rect_region(CREATURE_ATLAS, Rect2(x - 1, y - 120, 48, 120), Rect2(48, 0, 48, 120))
 
 func _draw_tree(x: float, y: float) -> void:
-	# Layered canopy, brighter leaf patches and a shaded trunk.
-	draw_rect(Rect2(x + 8, y - 65, 10, 66), Color(0.20, 0.13, 0.10))
-	draw_rect(Rect2(x + 10, y - 64, 4, 61), Color(0.42, 0.27, 0.16))
-	draw_rect(Rect2(x - 13, y - 82, 48, 35), Color(0.08, 0.28, 0.18))
-	draw_rect(Rect2(x - 8, y - 91, 39, 33), Color(0.12, 0.39, 0.24))
-	draw_rect(Rect2(x - 2, y - 108, 32, 34), Color(0.18, 0.49, 0.27))
-	draw_rect(Rect2(x + 3, y - 99, 9, 8), Color(0.34, 0.65, 0.34))
-	draw_rect(Rect2(x + 17, y - 86, 7, 6), Color(0.26, 0.57, 0.30))
+	draw_texture_rect_region(CREATURE_ATLAS, Rect2(x - 1, y - 120, 48, 120), Rect2(0, 0, 48, 120))
 
 func _draw_player() -> void:
 	var p := player - camera_offset
@@ -721,12 +709,7 @@ func _draw_player() -> void:
 func _draw_slimes() -> void:
 	for slime in slimes:
 		var p := slime - camera_offset
-		draw_circle(Vector2(p.x, p.y + 1.0), 20.0, Color(0.10, 0.22, 0.17, 0.22))
-		draw_colored_polygon(PackedVector2Array([Vector2(p.x - 17, p.y + 4), Vector2(p.x - 15, p.y - 9), Vector2(p.x - 7, p.y - 16), Vector2(p.x + 8, p.y - 16), Vector2(p.x + 16, p.y - 7), Vector2(p.x + 18, p.y + 4)]), Color(0.10, 0.48, 0.32))
-		draw_colored_polygon(PackedVector2Array([Vector2(p.x - 14, p.y + 2), Vector2(p.x - 12, p.y - 8), Vector2(p.x - 5, p.y - 13), Vector2(p.x + 7, p.y - 13), Vector2(p.x + 13, p.y - 6), Vector2(p.x + 14, p.y + 2)]), Color(0.24, 0.82, 0.48))
-		draw_rect(Rect2(p.x - 8, p.y - 5, 4, 5), Color(0.05, 0.13, 0.10))
-		draw_rect(Rect2(p.x + 4, p.y - 5, 4, 5), Color(0.05, 0.13, 0.10))
-		draw_rect(Rect2(p.x - 10, p.y - 10, 4, 2), Color(0.70, 1.0, 0.76))
+		draw_texture_rect_region(CREATURE_ATLAS, Rect2(p.x - 24, p.y - 37, 48, 120), Rect2(144, 0, 48, 120))
 
 func _draw_hud(size: Vector2) -> void:
 	draw_rect(Rect2(16, 16, 350, 178), Color(0.055, 0.08, 0.10, 0.84))
