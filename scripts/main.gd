@@ -544,6 +544,9 @@ func _input(event: InputEvent) -> void:
 			else:
 				action_mouse_down = true
 				_begin_action_touch(-2, event.position)
+				# A menu/context tap or an off-rune click must not leave mouse hold active.
+				if action_touch_id != -2:
+					action_mouse_down = false
 		else:
 			if action_mouse_down:
 				_end_action_touch(event.position)
@@ -571,6 +574,8 @@ func _input(event: InputEvent) -> void:
 			active_panel = "craft"
 
 func _begin_action_touch(touch_id: int, pos: Vector2) -> void:
+	if action_touch_id != -1:
+		return
 	var size := get_viewport_rect().size
 	if pos.distance_to(_menu_button_center(size, 0)) < 27.0:
 		active_panel = "inventory"
