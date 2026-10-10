@@ -753,6 +753,9 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		for i in range(9):
 			var fly_x := fposmod(float(i * 173 + 61) - camera_offset.x * 0.08, size.x + 60.0) - 30.0
 			var fly_y := horizon + 18.0 + float((i * 31 + 13) % 74) - camera_offset.y * 0.02
+			# Firefly halos have a 4 px radius; skip both glow draws when fully off-screen.
+			if fly_x + 4.0 < 0.0 or fly_x - 4.0 > size.x or fly_y + 4.0 < 0.0 or fly_y - 4.0 > size.y:
+				continue
 			var flicker := 0.35 + 0.65 * ((sin(day_time * 3.4 + float(i) * 1.71) + 1.0) * 0.5)
 			var glow_alpha := night_strength * flicker * 0.18
 			var fly_halo := firefly_halo_color
