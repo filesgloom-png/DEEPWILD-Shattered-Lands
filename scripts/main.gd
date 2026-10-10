@@ -904,8 +904,8 @@ func _draw_world(size: Vector2) -> void:
 						_draw_pine(px, ground_screen_y)
 					else:
 						_draw_tree(px, ground_screen_y)
-			elif ground_screen_y >= -12.0 and ground_screen_y <= size.y + 12.0:
-				# Small plants are only drawn when their short silhouettes can reach the viewport.
+			elif ground_screen_y >= -12.0 and ground_screen_y <= size.y + 12.0 and px + 18.0 >= 0.0 and px + 4.0 <= size.x:
+				# Small plant marks span about 4-18 px from the tile origin; skip off-screen flora.
 				_draw_ground_flora(px, ground_screen_y, biome, tx, flora_seed_offset)
 			# Placed lights and campfires extend at most 34 px above the surface.
 			# Their widest horizontal footprint is the torch glow (px - 13 to px + 37).
