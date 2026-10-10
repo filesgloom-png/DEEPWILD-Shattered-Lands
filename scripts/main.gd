@@ -21,8 +21,13 @@ var mouse_joystick := false
 var jump_requested := false
 var mine_requested := false
 var attack_requested := false
-var inventory := {"Wood": 0, "Stone": 0, "Copper": 0}
+const MAX_STACK := 99
+const RECIPES := ["Torch", "Planks", "Campfire"]
+var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Campfire": 0}
 var world_blocks: Dictionary = {}
+var harvested_trees: Dictionary = {}
+var tree_health: Dictionary = {}
+var craft_recipe_index := 0
 var slimes: Array[Vector2] = []
 var health := 100
 var day_time := 0.0
@@ -166,7 +171,68 @@ func _is_cave(tile_x: int, tile_y: int) -> bool:
 	var c := sin(float(tile_x + tile_y) * 0.19)
 	return a + b + c > 1.55
 
+func _add_item(item: String, amount: int) -> int:
+	if amount <= 0:
+		return 0
+	if not inventory.has(item):
+		inventory[item] = 0
+	var current := int(inventory[item])
+	var added := mini(amount, MAX_STACK - current)
+	inventory[item] = current + added
+	if added < amount:
+		message = item + " stack full!"
+		message_timer = 1.5
+	return added
+
+func _remove_item(item: String, amount: int) -> bool:
+	if amount < 0 or int(inventory.get(item, 0)) < amount:
+		return false
+	inventory[item] = int(inventory.get(item, 0)) - amount
+	return true
+
+func _tree_exists(tx: int) -> bool:
+	if harvested_trees.has(str(tx)):
+		return false
+	var biome := biome_at(tx)
+	if biome == "desert":
+		return tx % 11 == 4
+	if biome == "snow":
+		return tx % 8 == 2
+	if biome == "forest":
+		return tx % 5 == 2
+	return tx % 9 == 2
+
+func _chop_tree() -> bool:
+	var player_tile := int(floor(player.x / TILE))
+	var target := player_tile + facing
+	var best_tile := -1
+	var best_distance := 999
+	for tx in range(maxi(0, player_tile - 2), mini(WORLD_WIDTH, player_tile + 3)):
+		if not _tree_exists(tx):
+			continue
+		var distance := abs(tx - target)
+		if distance < best_distance and distance <= 2:
+			best_distance = distance
+			best_tile = tx
+	if best_tile == -1:
+		return false
+	var key := str(best_tile)
+	var hp := int(tree_health.get(key, 3)) - 1
+	if hp > 0:
+		tree_health[key] = hp
+		message = "Tree chopped: %d/3" % (3 - hp)
+		message_timer = 1.0
+	else:
+		tree_health.erase(key)
+		harvested_trees[key] = true
+		var wood_added := _add_item("Wood", 3)
+		message = "Tree felled! +%d Wood" % wood_added
+		message_timer = 1.8
+	return true
+
 func _mine_block() -> void:
+	if _chop_tree():
+		return
 	var tx := int(floor((player.x + facing * 42.0) / TILE))
 	var ty := int(floor((player.y + 10.0) / TILE))
 	var candidates := [Vector2i(tx, ty), Vector2i(tx, ty - 1), Vector2i(tx, ty + 1), Vector2i(int(player.x / TILE), ty)]
@@ -175,20 +241,20 @@ func _mine_block() -> void:
 		if kind == "" or kind == "bedrock":
 			continue
 		world_blocks[str(cell.x) + ":" + str(cell.y)] = ""
+		var drop := "Stone"
 		if kind == "copper_ore":
-			inventory["Copper"] = int(inventory["Copper"]) + 1
-			message = "+1 Copper ore"
-		elif kind == "grass" or kind == "dirt" or kind == "sand" or kind == "sandstone" or kind == "permafrost" or kind == "snow":
-			inventory["Stone"] = int(inventory["Stone"]) + 1
-			message = "+1 " + ("Sand" if kind == "sand" or kind == "sandstone" else "Stone")
-		elif kind == "stone":
-			inventory["Stone"] = int(inventory["Stone"]) + 1
-			message = "+1 Stone"
-		else:
-			message = "Mined " + kind
+			drop = "Copper"
+		elif kind == "grass" or kind == "dirt":
+			drop = "Dirt"
+		elif kind == "sand" or kind == "sandstone":
+			drop = "Sand"
+		elif kind == "snow":
+			drop = "Snow"
+		var added := _add_item(drop, 1)
+		message = "+%d %s" % [added, drop] if added > 0 else "Inventory stack full"
 		message_timer = 1.2
 		return
-	message = "Move close to a block to mine"
+	message = "Move close to a block or tree"
 	message_timer = 1.5
 
 func _attack() -> void:
@@ -259,15 +325,50 @@ func _handle_action_touch(pos: Vector2) -> void:
 	elif pos.distance_to(base + Vector2(-112, -112)) < 54.0:
 		mine_requested = true
 	elif pos.distance_to(Vector2(size.x - 72, 74)) < 55.0:
-		_craft_torch()
+		_craft_selected()
+	elif pos.distance_to(Vector2(size.x - 72, 158)) < 45.0:
+		_next_recipe()
 
-func _craft_torch() -> void:
-	if int(inventory["Wood"]) >= 1:
-		inventory["Wood"] = int(inventory["Wood"]) - 1
-		message = "Torch crafted"
-	else:
-		message = "Need wood to craft a torch"
-	message_timer = 1.5
+func _next_recipe() -> void:
+	craft_recipe_index = (craft_recipe_index + 1) % RECIPES.size()
+	message = "Recipe: " + RECIPES[craft_recipe_index]
+	message_timer = 1.4
+
+func _craft_selected() -> void:
+	var recipe := RECIPES[craft_recipe_index]
+	if recipe == "Torch":
+		if int(inventory["Wood"]) >= 2 and int(inventory["Stone"]) >= 1:
+			if int(inventory["Torch"]) >= MAX_STACK:
+				message = "Torch stack full"
+			else:
+				_remove_item("Wood", 2)
+				_remove_item("Stone", 1)
+				_add_item("Torch", 3)
+				message = "Crafted 3 Torches"
+		else:
+			message = "Torch: need 2 Wood + 1 Stone"
+	elif recipe == "Planks":
+		if int(inventory["Wood"]) >= 2:
+			if int(inventory["Planks"]) >= MAX_STACK:
+				message = "Planks stack full"
+			else:
+				_remove_item("Wood", 2)
+				_add_item("Planks", 4)
+				message = "Crafted 4 Planks"
+		else:
+			message = "Planks: need 2 Wood"
+	elif recipe == "Campfire":
+		if int(inventory["Wood"]) >= 4 and int(inventory["Stone"]) >= 3:
+			if int(inventory["Campfire"]) >= MAX_STACK:
+				message = "Campfire stack full"
+			else:
+				_remove_item("Wood", 4)
+				_remove_item("Stone", 3)
+				_add_item("Campfire", 1)
+				message = "Campfire crafted"
+		else:
+			message = "Campfire: need 4 Wood + 3 Stone"
+	message_timer = 1.8
 
 func _draw() -> void:
 	var size := get_viewport_rect().size
@@ -332,12 +433,13 @@ func _draw_world(size: Vector2) -> void:
 				draw_rect(Rect2(px + 6, py + 8, 5, 4), Color(0.71, 0.47, 0.27))
 		var ground_screen_y := float(surface * TILE) - camera_offset.y
 		var biome := biome_at(tx)
-		if biome == "desert" and tx % 11 == 4 and surface > 0:
-			_draw_cactus(px, ground_screen_y)
-		elif biome == "snow" and tx % 8 == 2 and surface > 0:
-			_draw_pine(px, ground_screen_y)
-		elif (biome == "forest" and tx % 5 == 2) or (biome == "plains" and tx % 9 == 2):
-			_draw_tree(px, ground_screen_y)
+		if _tree_exists(tx) and surface > 0:
+			if biome == "desert":
+				_draw_cactus(px, ground_screen_y)
+			elif biome == "snow":
+				_draw_pine(px, ground_screen_y)
+			else:
+				_draw_tree(px, ground_screen_y)
 
 func _draw_cactus(x: float, y: float) -> void:
 	draw_rect(Rect2(x + 9, y - 45, 7, 45), Color(0.18, 0.49, 0.29))
@@ -383,7 +485,9 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(30, 65), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 	draw_rect(Rect2(62, 52, 150, 15), Color(0.28, 0.15, 0.16))
 	draw_rect(Rect2(62, 52, 150.0 * float(health) / 100.0, 15), Color(0.84, 0.25, 0.26))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d   STONE %d   COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d STONE %d COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY 1  •  " + biome_at(int(player.x / TILE)).to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
 	if message_timer > 0.0:
 		var width := minf(size.x - 40.0, 510.0)
@@ -402,7 +506,8 @@ func _draw_controls(size: Vector2) -> void:
 	_draw_button(base + Vector2(-110, -8), "JUMP", Color(0.28, 0.58, 0.78))
 	_draw_button(base + Vector2(0, -112), "HIT", Color(0.77, 0.35, 0.28))
 	_draw_button(base + Vector2(-112, -112), "MINE", Color(0.68, 0.53, 0.25))
-	_draw_button(Vector2(size.x - 72, 74), "CRAFT", Color(0.32, 0.56, 0.39))
+	_draw_button(Vector2(size.x - 72, 74), "MAKE", Color(0.32, 0.56, 0.39))
+	_draw_button(Vector2(size.x - 72, 158), "NEXT", Color(0.40, 0.48, 0.57))
 
 func _draw_button(center: Vector2, label: String, color: Color) -> void:
 	draw_circle(center, 36, Color(0.04, 0.06, 0.07, 0.52))
@@ -410,7 +515,7 @@ func _draw_button(center: Vector2, label: String, color: Color) -> void:
 	draw_string(ThemeDB.fallback_font, center + Vector2(0, 5), label, HORIZONTAL_ALIGNMENT_CENTER, 72, 12, Color.WHITE)
 
 func _save_world() -> void:
-	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "inventory": inventory, "blocks": world_blocks, "slimes": []}
+	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "craft_recipe_index": craft_recipe_index, "slimes": []}
 	for slime in slimes:
 		data["slimes"].append([slime.x, slime.y])
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -433,6 +538,9 @@ func _load_world() -> void:
 	for key in inventory:
 		inventory[key] = int(saved_inventory.get(key, inventory[key]))
 	world_blocks = parsed.get("blocks", {})
+	harvested_trees = parsed.get("harvested_trees", {})
+	tree_health = parsed.get("tree_health", {})
+	craft_recipe_index = clampi(int(parsed.get("craft_recipe_index", 0)), 0, RECIPES.size() - 1)
 	slimes.clear()
 	for item in parsed.get("slimes", []):
 		if item is Array and item.size() >= 2:
