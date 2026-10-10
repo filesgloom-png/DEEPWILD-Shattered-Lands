@@ -988,8 +988,12 @@ func _draw_effects() -> void:
 		draw_circle(p, 7.0 + (1.0 - strength) * 5.0, Color(0.16, 0.78, 0.69, 0.12 * strength))
 
 func _draw_slimes() -> void:
+	var viewport_size := get_viewport_rect().size
 	for slime in slimes:
 		var p := slime - camera_offset
+		# Slime sprites are 48x48; skip the texture draw when fully outside the viewport.
+		if p.x + 24.0 < 0.0 or p.x - 24.0 > viewport_size.x or p.y + 18.0 < 0.0 or p.y - 30.0 > viewport_size.y:
+			continue
 		draw_texture_rect_region(CREATURE_ATLAS, Rect2(p.x - 24, p.y - 30, 48, 48), Rect2(144, 68, 48, 48))
 
 func _draw_hud(size: Vector2) -> void:
