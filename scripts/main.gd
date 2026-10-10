@@ -633,10 +633,10 @@ func _draw() -> void:
 
 func _draw_scenery(size: Vector2, sun: float) -> void:
 	var horizon := size.y * 0.54 - camera_offset.y * 0.04
-	# Subtle atmospheric bands keep the sky from looking like a flat solid color.
+	# Subtle atmospheric bands keep the sky from looking flat; reuse one color per frame.
+	var band_color := Color(0.08, 0.13, 0.23).lerp(Color(0.42, 0.72, 0.91), sun)
+	band_color.a = 0.035
 	for band in range(6):
-		var band_color := Color(0.08, 0.13, 0.23).lerp(Color(0.42, 0.72, 0.91), sun)
-		band_color.a = 0.035
 		draw_rect(Rect2(0, float(band) * size.y / 6.0, size.x, size.y / 6.0 + 1.0), band_color)
 	# A subtle upper-sky night veil adds depth without textures, nodes, or extra scene state.
 	var night_veil := clampf((0.48 - sun) / 0.48, 0.0, 1.0)
@@ -688,8 +688,10 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 	# Soft cloud clusters and a gently glowing sun/moon.
 	for i in range(5):
 		var cx := fposmod(float(i * 287) - camera_offset.x * 0.035 + 80.0, size.x + 240.0) - 120.0
-		var cy := 105.0 + float((i * 29) % 90) - camera_offset.y * 0.015
-		var cloud := Color(0.87, 0.94, 0.97, 0.28 if sun > 0.3 else 0.12)
+		var cy := 105.0 + float((i * 29) % 90) - camera_offset.y * 0.015 + float((i % 3) - 1) * 5.0
+		# Small deterministic opacity differences make the cloud layer feel less repeated.
+		var cloud_alpha := (0.25 + float(i % 3) * 0.025) if sun > 0.3 else (0.10 + float(i % 3) * 0.01)
+		var cloud := Color(0.87, 0.94, 0.97, cloud_alpha)
 		draw_circle(Vector2(cx, cy), 17.0, cloud)
 		draw_circle(Vector2(cx + 20.0, cy - 7.0), 23.0, cloud)
 		draw_circle(Vector2(cx + 43.0, cy + 1.0), 15.0, cloud)
