@@ -1066,8 +1066,10 @@ func _draw_controls(size: Vector2) -> void:
 	draw_arc(center, 34.0, 0.0, TAU, 36, Color(0.69, 0.80, 0.76, 0.34), 1.5, true)
 	for tick in range(8):
 		var angle := float(tick) * TAU / 8.0
-		var inner := center + Vector2(cos(angle), sin(angle)) * 43.0
-		var outer := center + Vector2(cos(angle), sin(angle)) * 48.0
+		# Reuse the same direction vector for both endpoints of each joystick tick.
+		var direction := Vector2(cos(angle), sin(angle))
+		var inner := center + direction * 43.0
+		var outer := center + direction * 48.0
 		draw_line(inner, outer, Color(0.72, 0.84, 0.79, 0.45), 2.0)
 	var knob := center
 	if active:
