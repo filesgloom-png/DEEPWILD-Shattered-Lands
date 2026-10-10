@@ -699,6 +699,15 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		draw_line(Vector2(cx - 8.0, cy - 10.0), Vector2(cx - 1.0, cy - 14.0), cloud_highlight, 1.5)
 		draw_line(Vector2(cx + 12.0, cy - 22.0), Vector2(cx + 24.0, cy - 25.0), cloud_highlight, 1.5)
 		draw_line(Vector2(cx + 27.0, cy + 9.0), Vector2(cx + 38.0, cy + 11.0), cloud_shadow, 2.0)
+	# A few distant bird silhouettes add gentle daytime motion with only six short strokes.
+	var bird_visibility := clampf((sun - 0.24) / 0.46, 0.0, 1.0)
+	if bird_visibility > 0.0:
+		for i in range(3):
+			var bird_x := fposmod(float(i * 211 + 37) + day_time * 95.0 - camera_offset.x * 0.025, size.x + 80.0) - 40.0
+			var bird_y := size.y * 0.22 + float(i * 13) + sin(day_time * 1.4 + float(i)) * 4.0
+			var wing_color := Color(0.12, 0.20, 0.25, bird_visibility * 0.58)
+			draw_line(Vector2(bird_x - 5.0, bird_y), Vector2(bird_x, bird_y + 2.0), wing_color, 1.5)
+			draw_line(Vector2(bird_x, bird_y + 2.0), Vector2(bird_x + 5.0, bird_y), wing_color, 1.5)
 	var celestial := Color(1.0, 0.79, 0.42).lerp(Color(0.91, 0.94, 1.0), sun)
 	# Let the sun and moon travel across a simple arc; position is derived from day_time.
 	var celestial_x := size.x * (0.5 + cos(day_time - PI * 0.5) * 0.36)
