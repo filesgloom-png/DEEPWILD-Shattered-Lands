@@ -638,6 +638,14 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		var band_color := Color(0.08, 0.13, 0.23).lerp(Color(0.42, 0.72, 0.91), sun)
 		band_color.a = 0.035
 		draw_rect(Rect2(0, float(band) * size.y / 6.0, size.x, size.y / 6.0 + 1.0), band_color)
+	# A subtle upper-sky night veil adds depth without textures, nodes, or extra scene state.
+	var night_veil := clampf((0.48 - sun) / 0.48, 0.0, 1.0)
+	if night_veil > 0.0:
+		for band in range(4):
+			var veil_alpha := night_veil * (0.055 - float(band) * 0.010)
+			var veil_color := Color(0.025, 0.045, 0.12, veil_alpha)
+			var veil_y := float(band) * size.y * 0.075
+			draw_rect(Rect2(0.0, veil_y, size.x, size.y * 0.075 + 1.0), veil_color)
 	# Sparse twinkling stars fade in at dusk; deterministic positions avoid random work each frame.
 	var night_strength := clampf((0.42 - sun) / 0.42, 0.0, 1.0)
 	if night_strength > 0.0:
