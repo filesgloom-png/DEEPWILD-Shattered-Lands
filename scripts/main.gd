@@ -41,6 +41,7 @@ var player_respawn := Vector2(320.0, 240.0)
 var checkpoint_tile := -1
 var campfire_heal_timer := 0.0
 var slime_damage_cooldown := 0.0
+var slime_spawn_timer := 0.0
 var world_save_loaded := false
 
 func _ready() -> void:
@@ -109,6 +110,20 @@ func _update_player(delta: float) -> void:
 			mine_requested = true
 
 func _update_slimes(delta: float) -> void:
+	if slimes.size() < 3:
+		slime_spawn_timer += delta
+		if slime_spawn_timer >= 12.0:
+			slime_spawn_timer = 0.0
+			var spawn_direction := 1.0 if player.x < WORLD_WIDTH * TILE * 0.5 else -1.0
+			var spawn_x := clampf(player.x + spawn_direction * 360.0, 24.0, WORLD_WIDTH * TILE - 24.0)
+			var spawn_tile := int(floor(spawn_x / TILE))
+			var spawn_y := _ground_surface_y(spawn_tile) - 12.0
+			slimes.append(Vector2(spawn_x, spawn_y))
+			message = "A slime emerged nearby"
+			message_timer = 1.8
+			_save_world()
+	else:
+		slime_spawn_timer = 0.0
 	for i in range(slimes.size()):
 		var slime: Vector2 = slimes[i]
 		var distance := player.x - slime.x
@@ -663,6 +678,7 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(30, 165), "Campfires restore 5 HP every 3 seconds nearby", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.75, 0.42))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 68), "SLIMES %d/3" % slimes.size(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(0.70, 1.0, 0.75))
 	if message_timer > 0.0:
 		var width := minf(size.x - 40.0, 510.0)
 		draw_rect(Rect2((size.x - width) * 0.5, 34, width, 38), Color(0.05, 0.07, 0.08, 0.82))
