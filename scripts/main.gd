@@ -676,6 +676,12 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		draw_circle(Vector2(cx, cy), 17.0, cloud)
 		draw_circle(Vector2(cx + 20.0, cy - 7.0), 23.0, cloud)
 		draw_circle(Vector2(cx + 43.0, cy + 1.0), 15.0, cloud)
+		# Fine top highlights and a soft underside give each cloud more volume.
+		var cloud_highlight := Color(0.98, 1.0, 1.0, 0.22 if sun > 0.3 else 0.10)
+		var cloud_shadow := Color(0.24, 0.35, 0.48, 0.12 if sun > 0.3 else 0.08)
+		draw_line(Vector2(cx - 8.0, cy - 10.0), Vector2(cx - 1.0, cy - 14.0), cloud_highlight, 1.5)
+		draw_line(Vector2(cx + 12.0, cy - 22.0), Vector2(cx + 24.0, cy - 25.0), cloud_highlight, 1.5)
+		draw_line(Vector2(cx + 27.0, cy + 9.0), Vector2(cx + 38.0, cy + 11.0), cloud_shadow, 2.0)
 	var celestial := Color(1.0, 0.79, 0.42).lerp(Color(0.91, 0.94, 1.0), sun)
 	# Let the sun and moon travel across a simple arc; position is derived from day_time.
 	var celestial_x := size.x * (0.5 + cos(day_time - PI * 0.5) * 0.36)
