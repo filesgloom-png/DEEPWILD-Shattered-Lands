@@ -1099,12 +1099,21 @@ func _draw_effects() -> void:
 
 func _draw_slimes() -> void:
 	var viewport_size := get_viewport_rect().size
-	for slime in slimes:
-		var p := slime - camera_offset
+	for i in range(slimes.size()):
+		var p := slimes[i] - camera_offset
 		# Slime sprites are 48x48; skip the texture draw when fully outside the viewport.
 		if p.x + 24.0 < 0.0 or p.x - 24.0 > viewport_size.x or p.y + 18.0 < 0.0 or p.y - 30.0 > viewport_size.y:
 			continue
 		draw_texture_rect_region(CREATURE_ATLAS, Rect2(p.x - 24, p.y - 30, 48, 48), Rect2(144, 68, 48, 48))
+		# Two compact segments make the slime's two-hit health readable at a glance.
+		var hp := clampi(slime_health[i], 1, 2)
+		var bar_position := Vector2(p.x - 11.0, p.y - 35.0)
+		draw_rect(Rect2(bar_position - Vector2(2.0, 2.0), Vector2(26.0, 7.0)), Color(0.025, 0.04, 0.045, 0.88), true)
+		for segment in range(2):
+			var segment_color := Color(0.35, 0.86, 0.49) if segment < hp else Color(0.20, 0.25, 0.24)
+			if hp == 1 and segment == 0:
+				segment_color = Color(0.98, 0.63, 0.25)
+			draw_rect(Rect2(bar_position + Vector2(float(segment) * 12.0, 0.0), Vector2(10.0, 3.0)), segment_color, true)
 
 func _draw_hud(size: Vector2) -> void:
 	draw_rect(Rect2(16, 16, 350, 178), Color(0.055, 0.08, 0.10, 0.84))
