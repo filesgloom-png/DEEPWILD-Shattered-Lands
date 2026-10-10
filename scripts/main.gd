@@ -414,13 +414,13 @@ func _handle_action_touch(pos: Vector2) -> void:
 		attack_requested = true
 	elif pos.distance_to(base + Vector2(-112, -112)) < 54.0:
 		mine_requested = true
-	elif pos.distance_to(Vector2(size.x - 72, 74)) < 55.0:
+	elif pos.distance_to(_right_button_center(size, 0)) < 38.0:
 		_craft_selected()
-	elif pos.distance_to(Vector2(size.x - 72, 158)) < 45.0:
+	elif pos.distance_to(_right_button_center(size, 1)) < 38.0:
 		_next_recipe()
-	elif pos.distance_to(Vector2(size.x - 72, 242)) < 45.0:
+	elif pos.distance_to(_right_button_center(size, 2)) < 38.0:
 		_use_selected_item()
-	elif pos.distance_to(Vector2(size.x - 72, 326)) < 45.0:
+	elif pos.distance_to(_right_button_center(size, 3)) < 38.0:
 		_set_checkpoint()
 
 func _next_recipe() -> void:
@@ -825,15 +825,21 @@ func _draw_controls(size: Vector2) -> void:
 	var hit_color := Color(0.77, 0.35, 0.28) if attack_cooldown <= 0.0 else Color(0.38, 0.40, 0.42)
 	_draw_button(base + Vector2(0, -112), "HIT", hit_color)
 	_draw_button(base + Vector2(-112, -112), "MINE", Color(0.68, 0.53, 0.25))
-	_draw_button(Vector2(size.x - 72, 74), "MAKE", Color(0.32, 0.56, 0.39))
-	_draw_button(Vector2(size.x - 72, 158), "NEXT", Color(0.40, 0.48, 0.57))
-	_draw_button(Vector2(size.x - 72, 242), "USE", Color(0.68, 0.46, 0.25))
-	_draw_button(Vector2(size.x - 72, 326), "CAMP", Color(0.43, 0.58, 0.35))
+	var button_radius := clampf(size.y * 0.065, 25.0, 34.0)
+	_draw_button(_right_button_center(size, 0), "MAKE", Color(0.32, 0.56, 0.39), button_radius)
+	_draw_button(_right_button_center(size, 1), "NEXT", Color(0.40, 0.48, 0.57), button_radius)
+	_draw_button(_right_button_center(size, 2), "USE", Color(0.68, 0.46, 0.25), button_radius)
+	_draw_button(_right_button_center(size, 3), "CAMP", Color(0.43, 0.58, 0.35), button_radius)
 
-func _draw_button(center: Vector2, label: String, color: Color) -> void:
-	draw_circle(center, 36, Color(0.04, 0.06, 0.07, 0.52))
-	draw_circle(center, 29, color.darkened(0.1))
-	draw_string(ThemeDB.fallback_font, center + Vector2(0, 5), label, HORIZONTAL_ALIGNMENT_CENTER, 72, 12, Color.WHITE)
+func _right_button_center(size: Vector2, index: int) -> Vector2:
+	var step_y := clampf((size.y - 116.0) / 3.0, 48.0, 76.0)
+	return Vector2(size.x - 54.0, 58.0 + float(index) * step_y)
+
+func _draw_button(center: Vector2, label: String, color: Color, radius: float = 36.0) -> void:
+	draw_circle(center, radius + 5.0, Color(0.04, 0.06, 0.07, 0.52))
+	draw_circle(center, radius, color.darkened(0.1))
+	draw_circle(center + Vector2(-radius * 0.22, -radius * 0.25), radius * 0.23, Color(1.0, 1.0, 1.0, 0.12))
+	draw_string(ThemeDB.fallback_font, center + Vector2(0, 4), label, HORIZONTAL_ALIGNMENT_CENTER, radius * 2.5, 11, Color.WHITE)
 
 func _save_world() -> void:
 	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "checkpoint_tile": checkpoint_tile, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
