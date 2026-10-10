@@ -724,12 +724,18 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 	var far_color := PARALLAX_FAR_NIGHT_COLOR.lerp(PARALLAX_FAR_DAY_COLOR, sun)
 	for i in range(9):
 		var x := fposmod(float(i * 210) - camera_offset.x * 0.10, size.x + 300.0) - 150.0
+		# Skip distant mountain triangles whose full horizontal span is off-screen.
+		if x + 155.0 < 0.0 or x - 135.0 > size.x:
+			continue
 		var h := 80.0 + float((i * 43) % 95)
 		var y := horizon - h - camera_offset.y * 0.035
 		draw_colored_polygon(PackedVector2Array([Vector2(x - 135, horizon), Vector2(x, y), Vector2(x + 155, horizon)]), far_color)
 	var near_color := PARALLAX_NEAR_NIGHT_COLOR.lerp(PARALLAX_NEAR_DAY_COLOR, sun)
 	for i in range(7):
 		var x := fposmod(float(i * 275 + 95) - camera_offset.x * 0.19, size.x + 360.0) - 180.0
+		# Skip near mountain triangles whose full horizontal span is off-screen.
+		if x + 170.0 < 0.0 or x - 130.0 > size.x:
+			continue
 		var h := 70.0 + float((i * 37) % 72)
 		var y := horizon + 26.0 - h - camera_offset.y * 0.055
 		draw_colored_polygon(PackedVector2Array([Vector2(x - 130, horizon + 26.0), Vector2(x, y), Vector2(x + 170, horizon + 26.0)]), near_color)
