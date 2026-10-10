@@ -10,6 +10,17 @@ const GRAVITY := 1150.0
 const WALK_SPEED := 255.0
 const JUMP_SPEED := -455.0
 const SAVE_PATH := "user://deepwild_save.json"
+# Immutable world-render palette: avoid rebuilding these colors on every frame.
+const CAVE_VOID_COLOR := Color(0.045, 0.055, 0.075)
+const CAVE_MARK_COLOR := Color(0.13, 0.16, 0.19)
+const CAVE_MARK_SHADOW := Color(0.085, 0.11, 0.14)
+const CAVE_SHARD_COLOR := Color(0.18, 0.62, 0.58, 0.82)
+const CAVE_SHARD_HIGHLIGHT := Color(0.55, 0.94, 0.78, 0.8)
+const CAVE_SPECK_COLOR := Color(0.15, 0.18, 0.21)
+const GRASS_EDGE_COLOR := Color(0.57, 0.82, 0.43, 0.72)
+const SAND_EDGE_COLOR := Color(0.88, 0.73, 0.45, 0.72)
+const SNOW_EDGE_COLOR := Color(0.82, 0.94, 1.0, 0.78)
+const EDGE_SHADOW_COLOR := Color(0.035, 0.06, 0.045, 0.24)
 # Shared flora palette: reuse immutable colors instead of constructing them per visible plant.
 const FLORA_SAND_DARK := Color(0.56, 0.39, 0.22)
 const FLORA_SAND_LIGHT := Color(0.72, 0.53, 0.30)
@@ -771,16 +782,6 @@ func _draw_world(size: Vector2) -> void:
 	var end_x := mini(WORLD_WIDTH, int(ceil((camera_offset.x + size.x) / TILE)) + 2)
 	var start_y := maxi(0, int(floor(camera_offset.y / TILE)) - 1)
 	var end_y := mini(WORLD_DEPTH, int(ceil((camera_offset.y + size.y) / TILE)) + 1)
-	var cave_void_color := Color(0.045, 0.055, 0.075)
-	var cave_mark_color := Color(0.13, 0.16, 0.19)
-	var cave_mark_shadow := Color(0.085, 0.11, 0.14)
-	var cave_shard_color := Color(0.18, 0.62, 0.58, 0.82)
-	var cave_shard_highlight := Color(0.55, 0.94, 0.78, 0.8)
-	var cave_speck_color := Color(0.15, 0.18, 0.21)
-	var grass_edge_color := Color(0.57, 0.82, 0.43, 0.72)
-	var sand_edge_color := Color(0.88, 0.73, 0.45, 0.72)
-	var snow_edge_color := Color(0.82, 0.94, 1.0, 0.78)
-	var edge_shadow_color := Color(0.035, 0.06, 0.045, 0.24)
 	for tx in range(start_x, end_x):
 		var surface := int(round(ground_y_at(tx)))
 		var px := float(tx * TILE) - camera_offset.x
@@ -792,18 +793,18 @@ func _draw_world(size: Vector2) -> void:
 			# Cave voids are dark, not transparent holes showing the sky behind the world.
 			if kind == "":
 				if ty > surface + 5 and ty < WORLD_DEPTH - 4:
-					draw_rect(Rect2(px, py, TILE, TILE), cave_void_color)
+					draw_rect(Rect2(px, py, TILE, TILE), CAVE_VOID_COLOR)
 					# Sparse deterministic cave details, evaluated only for visible cells.
 					var cave_mark := posmod(tx * 37 + ty * 19 + int(world_seed % 101), 23)
 					if cave_mark == 0:
-						draw_rect(Rect2(px + 3, py + 4, 7, 2), cave_mark_color)
-						draw_rect(Rect2(px + 5, py + 6, 3, 2), cave_mark_shadow)
+						draw_rect(Rect2(px + 3, py + 4, 7, 2), CAVE_MARK_COLOR)
+						draw_rect(Rect2(px + 5, py + 6, 3, 2), CAVE_MARK_SHADOW)
 					elif cave_mark == 7 and ty > surface + 8:
-						var shard_color := cave_shard_color
+						var shard_color := CAVE_SHARD_COLOR
 						draw_colored_polygon(PackedVector2Array([Vector2(px + 8, py + 18), Vector2(px + 12, py + 5), Vector2(px + 15, py + 18)]), shard_color)
-						draw_line(Vector2(px + 12, py + 8), Vector2(px + 12, py + 17), cave_shard_highlight, 1.0)
+						draw_line(Vector2(px + 12, py + 8), Vector2(px + 12, py + 17), CAVE_SHARD_HIGHLIGHT, 1.0)
 					elif (tx * 11 + ty * 5) % 17 == 0:
-						draw_rect(Rect2(px + 16, py + 3, 3, 2), cave_speck_color)
+						draw_rect(Rect2(px + 16, py + 3, 3, 2), CAVE_SPECK_COLOR)
 				continue
 			# A single atlas blit replaces many per-tile draw calls and provides
 			# hand-authored pixel texture while retaining the original tile grid.
@@ -831,13 +832,13 @@ func _draw_world(size: Vector2) -> void:
 			draw_texture_rect_region(TERRAIN_ATLAS, Rect2(px, py, TILE, TILE), Rect2(atlas_index * TILE, 0, TILE, TILE))
 			# Crisp biome-tinted surface edging adds tile definition with only two lightweight strokes.
 			if ty == surface:
-				var edge_color := grass_edge_color
+				var edge_color := GRASS_EDGE_COLOR
 				if kind == "sand":
-					edge_color = sand_edge_color
+					edge_color = SAND_EDGE_COLOR
 				elif kind == "snow":
-					edge_color = snow_edge_color
+					edge_color = SNOW_EDGE_COLOR
 				draw_line(Vector2(px, py + 1.0), Vector2(px + TILE, py + 1.0), edge_color, 1.0)
-				draw_line(Vector2(px + 2.0, py + 3.0), Vector2(px + TILE - 2.0, py + 3.0), edge_shadow_color, 1.0)
+				draw_line(Vector2(px + 2.0, py + 3.0), Vector2(px + TILE - 2.0, py + 3.0), EDGE_SHADOW_COLOR, 1.0)
 		var ground_screen_y := float(surface * TILE) - camera_offset.y
 		var biome := biome_at(tx)
 		var has_tree := _tree_exists(tx) and surface > 0
