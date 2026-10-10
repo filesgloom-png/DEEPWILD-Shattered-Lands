@@ -44,7 +44,7 @@ func _ready() -> void:
 	if slimes.is_empty():
 		slimes = [Vector2(520, 0), Vector2(890, 0), Vector2(1260, 0)]
 	for slime in slimes:
-		slime.y = ground_y_at(int(slime.x / TILE)) - 16
+		slime.y = _ground_surface_y(int(floor(slime.x / TILE))) - 12
 	set_process(true)
 
 func _process(delta: float) -> void:
@@ -80,7 +80,7 @@ func _update_player(delta: float) -> void:
 		facing = 1 if move_axis > 0.0 else -1
 	velocity.y += GRAVITY * delta
 	player += velocity * delta
-	var ground := ground_y_at(int(floor(player.x / TILE))) - 38.0
+	var ground := _ground_surface_y(int(floor(player.x / TILE)))
 	if player.y >= ground:
 		player.y = ground
 		velocity.y = 0.0
@@ -102,7 +102,7 @@ func _update_slimes(delta: float) -> void:
 			slime.x += signf(distance) * 42.0 * delta
 		if absf(distance) < 30.0 and absf(player.y - slime.y) < 45.0:
 			health = maxi(0, health - 1) if randf() < delta * 0.8 else health
-		slime.y = ground_y_at(int(slime.x / TILE)) - 16.0
+		slime.y = _ground_surface_y(int(floor(slime.x / TILE))) - 12.0
 		slimes[i] = slime
 	if health <= 0:
 		health = 100
@@ -136,6 +136,14 @@ func ground_y_at(tile_x: int) -> float:
 	elif biome == "snow":
 		hills += sin(float(tile_x) * 0.12) * 2.2
 	return 17.0 + hills
+
+func _ground_surface_y(tile_x: int) -> float:
+	var safe_x: int = clampi(tile_x, 0, WORLD_WIDTH - 1)
+	for tile_y in range(WORLD_DEPTH):
+		var kind: String = block_type(safe_x, tile_y)
+		if kind != "":
+			return float(tile_y * TILE) - 2.0
+	return float(WORLD_DEPTH * TILE)
 
 func block_type(tile_x: int, tile_y: int) -> String:
 	var key := str(tile_x) + ":" + str(tile_y)
