@@ -10,6 +10,25 @@ const GRAVITY := 1150.0
 const WALK_SPEED := 255.0
 const JUMP_SPEED := -455.0
 const SAVE_PATH := "user://deepwild_save.json"
+# Shared flora palette: reuse immutable colors instead of constructing them per visible plant.
+const FLORA_SAND_DARK := Color(0.56, 0.39, 0.22)
+const FLORA_SAND_LIGHT := Color(0.72, 0.53, 0.30)
+const FLORA_CACTUS_DARK := Color(0.52, 0.56, 0.27)
+const FLORA_CACTUS_LIGHT := Color(0.62, 0.62, 0.31)
+const FLORA_SNOW_DARK := Color(0.42, 0.68, 0.70)
+const FLORA_SNOW_LIGHT := Color(0.56, 0.79, 0.78)
+const FLORA_SNOW_BASE := Color(0.36, 0.61, 0.65)
+const FLORA_FOREST_DARK := Color(0.20, 0.49, 0.28)
+const FLORA_FOREST_MID := Color(0.29, 0.62, 0.32)
+const FLORA_FOREST_LIGHT := Color(0.22, 0.53, 0.27)
+const FLORA_FOREST_STEM := Color(0.27, 0.48, 0.25)
+const FLORA_FLOWER_PINK := Color(0.88, 0.65, 0.75)
+const FLORA_FLOWER_CENTER := Color(0.96, 0.84, 0.50)
+const FLORA_PLAIN_DARK := Color(0.30, 0.58, 0.31)
+const FLORA_PLAIN_LIGHT := Color(0.38, 0.66, 0.34)
+const FLORA_PLAIN_STEM := Color(0.34, 0.57, 0.29)
+const FLORA_FLOWER_GOLD := Color(0.92, 0.74, 0.42)
+const FLORA_FLOWER_PALE := Color(0.98, 0.91, 0.64)
 
 var player := Vector2(320.0, 240.0)
 var velocity := Vector2.ZERO
@@ -836,35 +855,35 @@ func _draw_ground_flora(x: float, y: float, biome: String, tx: int) -> void:
 	var mark := posmod(tx * 17 + int(world_seed % 97), 19)
 	if biome == "desert":
 		if mark == 2 or mark == 11:
-			draw_rect(Rect2(x + 5, y - 4, 5, 3), Color(0.56, 0.39, 0.22))
-			draw_rect(Rect2(x + 8, y - 6, 3, 2), Color(0.72, 0.53, 0.30))
+			draw_rect(Rect2(x + 5, y - 4, 5, 3), FLORA_SAND_DARK)
+			draw_rect(Rect2(x + 8, y - 6, 3, 2), FLORA_SAND_LIGHT)
 		elif mark == 6:
-			draw_line(Vector2(x + 12, y - 2), Vector2(x + 9, y - 9), Color(0.52, 0.56, 0.27), 2.0)
-			draw_line(Vector2(x + 12, y - 3), Vector2(x + 16, y - 8), Color(0.62, 0.62, 0.31), 2.0)
+			draw_line(Vector2(x + 12, y - 2), Vector2(x + 9, y - 9), FLORA_CACTUS_DARK, 2.0)
+			draw_line(Vector2(x + 12, y - 3), Vector2(x + 16, y - 8), FLORA_CACTUS_LIGHT, 2.0)
 		return
 	if biome == "snow":
 		if mark == 1 or mark == 9:
-			draw_line(Vector2(x + 8, y - 2), Vector2(x + 6, y - 8), Color(0.42, 0.68, 0.70), 2.0)
-			draw_line(Vector2(x + 12, y - 2), Vector2(x + 15, y - 7), Color(0.56, 0.79, 0.78), 2.0)
-			draw_rect(Rect2(x + 7, y - 4, 7, 2), Color(0.36, 0.61, 0.65))
+			draw_line(Vector2(x + 8, y - 2), Vector2(x + 6, y - 8), FLORA_SNOW_DARK, 2.0)
+			draw_line(Vector2(x + 12, y - 2), Vector2(x + 15, y - 7), FLORA_SNOW_LIGHT, 2.0)
+			draw_rect(Rect2(x + 7, y - 4, 7, 2), FLORA_SNOW_BASE)
 		return
 	if biome == "forest":
 		if mark % 5 == 0:
-			draw_line(Vector2(x + 7, y - 2), Vector2(x + 5, y - 8), Color(0.20, 0.49, 0.28), 2.0)
-			draw_line(Vector2(x + 11, y - 2), Vector2(x + 13, y - 10), Color(0.29, 0.62, 0.32), 2.0)
-			draw_line(Vector2(x + 15, y - 2), Vector2(x + 18, y - 7), Color(0.22, 0.53, 0.27), 2.0)
+			draw_line(Vector2(x + 7, y - 2), Vector2(x + 5, y - 8), FLORA_FOREST_DARK, 2.0)
+			draw_line(Vector2(x + 11, y - 2), Vector2(x + 13, y - 10), FLORA_FOREST_MID, 2.0)
+			draw_line(Vector2(x + 15, y - 2), Vector2(x + 18, y - 7), FLORA_FOREST_LIGHT, 2.0)
 		elif mark == 3:
-			draw_line(Vector2(x + 12, y - 2), Vector2(x + 12, y - 9), Color(0.27, 0.48, 0.25), 1.5)
-			draw_circle(Vector2(x + 12, y - 10), 2.5, Color(0.88, 0.65, 0.75))
-			draw_circle(Vector2(x + 12, y - 10), 1.0, Color(0.96, 0.84, 0.50))
+			draw_line(Vector2(x + 12, y - 2), Vector2(x + 12, y - 9), FLORA_FOREST_STEM, 1.5)
+			draw_circle(Vector2(x + 12, y - 10), 2.5, FLORA_FLOWER_PINK)
+			draw_circle(Vector2(x + 12, y - 10), 1.0, FLORA_FLOWER_CENTER)
 	else:
 		if mark % 4 == 0:
-			draw_line(Vector2(x + 6, y - 2), Vector2(x + 4, y - 7), Color(0.30, 0.58, 0.31), 2.0)
-			draw_line(Vector2(x + 11, y - 2), Vector2(x + 13, y - 9), Color(0.38, 0.66, 0.34), 2.0)
+			draw_line(Vector2(x + 6, y - 2), Vector2(x + 4, y - 7), FLORA_PLAIN_DARK, 2.0)
+			draw_line(Vector2(x + 11, y - 2), Vector2(x + 13, y - 9), FLORA_PLAIN_LIGHT, 2.0)
 		elif mark == 2:
-			draw_line(Vector2(x + 12, y - 2), Vector2(x + 12, y - 8), Color(0.34, 0.57, 0.29), 1.5)
-			draw_circle(Vector2(x + 12, y - 9), 2.5, Color(0.92, 0.74, 0.42))
-			draw_circle(Vector2(x + 12, y - 9), 1.0, Color(0.98, 0.91, 0.64))
+			draw_line(Vector2(x + 12, y - 2), Vector2(x + 12, y - 8), FLORA_PLAIN_STEM, 1.5)
+			draw_circle(Vector2(x + 12, y - 9), 2.5, FLORA_FLOWER_GOLD)
+			draw_circle(Vector2(x + 12, y - 9), 1.0, FLORA_FLOWER_PALE)
 
 func _draw_cactus(x: float, y: float) -> void:
 	draw_texture_rect_region(CREATURE_ATLAS, Rect2(x - 1, y - 120, 48, 120), Rect2(96, 0, 48, 120))
