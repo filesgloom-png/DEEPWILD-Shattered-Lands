@@ -210,7 +210,7 @@ func _chop_tree() -> bool:
 	for tx in range(maxi(0, player_tile - 2), mini(WORLD_WIDTH, player_tile + 3)):
 		if not _tree_exists(tx):
 			continue
-		var distance := abs(tx - target)
+		var distance: int = absi(tx - target)
 		if distance < best_distance and distance <= 2:
 			best_distance = distance
 			best_tile = tx
