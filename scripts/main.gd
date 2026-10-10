@@ -119,6 +119,8 @@ var world_save_loaded := false
 # Short-lived cosmetic feedback; these values never affect gameplay or saves.
 var impact_timer := 0.0
 var impact_position := Vector2.ZERO
+var slime_hit_flash_timer := 0.0
+var slime_hit_flash_position := Vector2.ZERO
 var impact_kind := "mine"
 var pressed_action := ""
 var pressed_action_timer := 0.0
@@ -147,6 +149,7 @@ func _ensure_slime_health() -> void:
 func _process(delta: float) -> void:
 	slime_damage_cooldown = maxf(0.0, slime_damage_cooldown - delta)
 	impact_timer = maxf(0.0, impact_timer - delta)
+	slime_hit_flash_timer = maxf(0.0, slime_hit_flash_timer - delta)
 	pressed_action_timer = maxf(0.0, pressed_action_timer - delta)
 	if pressed_action_timer <= 0.0:
 		pressed_action = ""
@@ -441,6 +444,8 @@ func _attack() -> void:
 				return
 			var hp := slime_health[i] - 1
 			impact_position = slimes[i]
+			slime_hit_flash_position = slimes[i]
+			slime_hit_flash_timer = 0.16
 			# Push the slime away on contact with a successful melee strike.
 			var slime_knockback_direction := 1.0 if slimes[i].x >= player.x else -1.0
 			var pushed_slime := slimes[i]
@@ -1123,7 +1128,13 @@ func _draw_slimes() -> void:
 		# Slime sprites are 48x48; skip the texture draw when fully outside the viewport.
 		if p.x + 24.0 < 0.0 or p.x - 24.0 > viewport_size.x or p.y + 18.0 < 0.0 or p.y - 30.0 > viewport_size.y:
 			continue
-		draw_texture_rect_region(CREATURE_ATLAS, Rect2(p.x - 24, p.y - 30, 48, 48), Rect2(144, 68, 48, 48))
+		if slime_hit_flash_timer > 0.0 and slimes[i].distance_to(slime_hit_flash_position) < 0.1:
+			var flash_strength := clampf(slime_hit_flash_timer / 0.16, 0.0, 1.0)
+			draw_set_transform(p, 0.0, Vector2.ONE)
+			draw_texture_rect_region(CREATURE_ATLAS, Rect2(-24, -30, 48, 48), Rect2(144, 68, 48, 48), false, Color(1.0, 0.58 + flash_strength * 0.35, 0.48 + flash_strength * 0.4, 1.0))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		else:
+			draw_texture_rect_region(CREATURE_ATLAS, Rect2(p.x - 24, p.y - 30, 48, 48), Rect2(144, 68, 48, 48))
 		# Two compact segments make the slime's two-hit health readable at a glance.
 		var hp := clampi(slime_health[i], 1, 2)
 		var bar_position := Vector2(p.x - 11.0, p.y - 35.0)
