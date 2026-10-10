@@ -389,6 +389,9 @@ func _mine_block() -> void:
 			drop = "Snow"
 		elif kind == "planks":
 			drop = "Planks"
+		elif kind == "stone" and str(world_blocks.get(str(cell.x) + ":" + str(cell.y), "")) == "stone":
+			# Return crafted building material when the player dismantles their own block.
+			drop = "Stone Block"
 		if int(inventory.get(drop, 0)) >= MAX_STACK:
 			message = drop + " stack full! Block not mined"
 			message_timer = 1.5
