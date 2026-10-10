@@ -1,0 +1,53 @@
+name: DEEPWILD Android Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deepwild-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-build:
+    name: Validate project and export Android APK
+    runs-on: ubuntu-22.04
+    container:
+      image: barichello/godot-ci:4.5.1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify project files
+        run: |
+          test -f project.godot
+          test -f scenes/main.tscn
+          test -f scripts/main.gd
+          test -f export_presets.cfg
+          echo "Project files found."
+
+      - name: Validate Godot project
+        run: godot --headless --editor --path . --quit
+
+      - name: Export Android ARM64 APK
+        run: |
+          mkdir -p build
+          godot --headless --path . --export-debug "Android" build/DEEPWILD-Shattered-Lands.apk
+
+      - name: Verify APK
+        run: |
+          test -s build/DEEPWILD-Shattered-Lands.apk
+          file build/DEEPWILD-Shattered-Lands.apk
+          ls -lh build/DEEPWILD-Shattered-Lands.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DEEPWILD-Shattered-Lands-Android-APK
+          path: build/DEEPWILD-Shattered-Lands.apk
+          if-no-files-found: error
+          retention-days: 14
