@@ -112,6 +112,7 @@ var player_respawn := Vector2(320.0, 240.0)
 var checkpoint_tile := -1
 var campfire_heal_timer := 0.0
 var slime_damage_cooldown := 0.0
+var slime_health: Dictionary = {}
 var attack_cooldown := 0.0
 var slime_spawn_timer := 0.0
 var world_save_loaded := false
@@ -202,6 +203,7 @@ func _update_slimes(delta: float) -> void:
 			var spawn_tile := int(floor(spawn_x / TILE))
 			var spawn_y := _ground_surface_y(spawn_tile) - 12.0
 			slimes.append(Vector2(spawn_x, spawn_y))
+			slime_health[str(int(round(spawn_x)))] = 2
 			message = "A slime emerged nearby"
 			message_timer = 1.8
 			_save_world()
@@ -423,9 +425,18 @@ func _attack() -> void:
 				message = "Wild Essence stack full; slime not defeated"
 				message_timer = 1.8
 				return
+			var slime_key := str(int(round(slimes[i].x)))
+			var hp := int(slime_health.get(slime_key, 2)) - 1
 			impact_position = slimes[i]
 			impact_kind = "hit"
 			impact_timer = 0.26
+			if hp > 0:
+				slime_health[slime_key] = hp
+				message = "Slime hit! %d/2" % (2 - hp)
+				message_timer = 1.0
+				_save_world()
+				return
+			slime_health.erase(slime_key)
 			slimes.remove_at(i)
 			_add_item("Wild Essence", 1)
 			message = "Slime defeated! +1 Wild Essence"
@@ -1204,7 +1215,7 @@ func _draw_utility_chip(center: Vector2, label: String, accent: Color) -> void:
 	draw_string(ThemeDB.fallback_font, center + Vector2(4.0, 4.0), label, HORIZONTAL_ALIGNMENT_CENTER, 86.0, 11, Color(0.91, 0.95, 0.90).lerp(Color(1.0, 1.0, 0.92), pressed_strength))
 
 func _save_world() -> void:
-	var data := {"save_version": 2, "world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "checkpoint_tile": checkpoint_tile, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
+	var data := {"save_version": 2, "world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "checkpoint_tile": checkpoint_tile, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slime_health": slime_health, "slimes": []}
 	for slime in slimes:
 		data["slimes"].append([slime.x, slime.y])
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -1243,6 +1254,7 @@ func _load_world() -> void:
 	if int(parsed.get("save_version", 1)) < 2 and saved_recipe_index >= 4:
 		saved_recipe_index += 1
 	craft_recipe_index = clampi(saved_recipe_index, 0, RECIPES.size() - 1)
+	slime_health = parsed.get("slime_health", {})
 	slimes.clear()
 	for item in parsed.get("slimes", []):
 		if item is Array and item.size() >= 2:
