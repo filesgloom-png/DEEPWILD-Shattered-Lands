@@ -677,8 +677,12 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		draw_circle(Vector2(cx + 20.0, cy - 7.0), 23.0, cloud)
 		draw_circle(Vector2(cx + 43.0, cy + 1.0), 15.0, cloud)
 	var celestial := Color(1.0, 0.79, 0.42).lerp(Color(0.91, 0.94, 1.0), sun)
-	draw_circle(Vector2(size.x * 0.82, 92.0), 31.0, Color(celestial.r, celestial.g, celestial.b, 0.10))
-	draw_circle(Vector2(size.x * 0.82, 92.0), 24.0, celestial)
+	# Let the sun and moon travel across a simple arc; position is derived from day_time.
+	var celestial_x := size.x * (0.5 + cos(day_time - PI * 0.5) * 0.36)
+	var celestial_y := size.y * 0.31 - absf(sin(day_time)) * size.y * 0.20
+	var celestial_position := Vector2(celestial_x, celestial_y)
+	draw_circle(celestial_position, 31.0, Color(celestial.r, celestial.g, celestial.b, 0.10))
+	draw_circle(celestial_position, 24.0, celestial)
 
 func _draw_world(size: Vector2) -> void:
 	# Only evaluate cells that can actually appear on screen. The old loop
