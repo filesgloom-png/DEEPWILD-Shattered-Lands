@@ -39,6 +39,7 @@ var save_timer := 0.0
 var world_seed := 0
 var player_respawn := Vector2(320.0, 240.0)
 var checkpoint_tile := -1
+var campfire_heal_timer := 0.0
 
 func _ready() -> void:
 	randomize()
@@ -64,6 +65,7 @@ func _process(delta: float) -> void:
 		_save_world()
 	_update_player(delta)
 	_update_slimes(delta)
+	_update_campfire_rest(delta)
 	if mine_requested:
 		_mine_block()
 		mine_requested = false
@@ -388,6 +390,27 @@ func _use_selected_item() -> void:
 		message_timer = 1.5
 	message_timer = maxf(message_timer, 1.5)
 
+func _update_campfire_rest(delta: float) -> void:
+	if health >= 100:
+		campfire_heal_timer = 0.0
+		return
+	var player_tile: int = int(floor(player.x / TILE))
+	var near_fire := false
+	for offset in range(-2, 3):
+		var object_kind: String = str(placed_objects.get(str(player_tile + offset), ""))
+		if object_kind == "Campfire" and absf(float(offset) * TILE) <= 48.0:
+			near_fire = true
+			break
+	if not near_fire:
+		campfire_heal_timer = 0.0
+		return
+	campfire_heal_timer += delta
+	if campfire_heal_timer >= 3.0:
+		campfire_heal_timer = 0.0
+		health = mini(100, health + 5)
+		message = "Resting by campfire: +5 HP"
+		message_timer = 1.4
+
 func _set_checkpoint() -> void:
 	var tile_x: int = clampi(int(floor(player.x / TILE)), 0, WORLD_WIDTH - 1)
 	checkpoint_tile = tile_x
@@ -567,7 +590,7 @@ func _draw_slimes() -> void:
 		draw_rect(Rect2(p.x + 4, p.y - 5, 4, 5), Color(0.08, 0.15, 0.12))
 
 func _draw_hud(size: Vector2) -> void:
-	draw_rect(Rect2(16, 16, 350, 150), Color(0.055, 0.08, 0.10, 0.84))
+	draw_rect(Rect2(16, 16, 350, 164), Color(0.055, 0.08, 0.10, 0.84))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 42), "DEEPWILD", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.91, 0.83, 0.57))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 65), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 	draw_rect(Rect2(62, 52, 150, 15), Color(0.28, 0.15, 0.16))
@@ -575,6 +598,7 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d STONE %d COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  CAMPFIRE %d  ESSENCE %d" % [inventory["Planks"], inventory["Campfire"], inventory["Wild Essence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 151), "Campfires restore 5 HP every 3 seconds nearby", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.75, 0.42))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
 	if message_timer > 0.0:
