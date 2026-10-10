@@ -55,6 +55,14 @@ jobs:
           EOF
           cat "$HOME/.config/godot/editor_settings-4.tres"
 
+      - name: Prepare Android debug signing key
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -s "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+          fi
+          test -s "$HOME/.android/debug.keystore"
+
       - name: Verify project files
         run: |
           test -f project.godot
