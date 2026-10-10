@@ -15,141 +15,96 @@ concurrency:
 jobs:
   validate-and-build:
     name: Validate project and export Android APK
-    runs-on: ubuntu-22.04
-    container:
-      image: barichello/godot-ci:4.5.1
-    env:
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-      ANDROID_HOME: /usr/lib/android-sdk
-      ANDROID_SDK_ROOT: /usr/lib/android-sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install required system packages
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends fontconfig openjdk-17-jdk unzip curl python3
-          java -version
-          test -d "$JAVA_HOME"
-          test -d "$ANDROID_HOME"
+      - name: Install Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-      - name: Install matching Godot export templates
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          packages: platform-tools
+
+      - name: Install Android SDK platform and build tools
         run: |
-          mkdir -p "$HOME/.local/share/godot/export_templates/4.5.1.stable"
-          curl -fL --retry 3             https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz             -o /tmp/godot-templates.tpz
-          unzip -o /tmp/godot-templates.tpz -d /tmp/godot-templates
-          cp /tmp/godot-templates/templates/* "$HOME/.local/share/godot/export_templates/4.5.1.stable/"
-          if [ -s /tmp/godot-templates/version.txt ]; then
-            cp /tmp/godot-templates/version.txt "$HOME/.local/share/godot/export_templates/4.5.1.stable/version.txt"
-          else
-            printf '4.5.1.stable\n' > "$HOME/.local/share/godot/export_templates/4.5.1.stable/version.txt"
-          fi
-          echo "Installed export template files:"
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "JAVA_HOME=$JAVA_HOME"
+          test -x "$ANDROID_HOME/platform-tools/adb"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          test -d "$ANDROID_HOME/platforms/android-35"
+
+      - name: Install Godot 4.5.1 and matching export templates
+        run: |
+          mkdir -p "$HOME/godot" "$HOME/.local/share/godot/export_templates/4.5.1.stable"
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_linux.x86_64.zip -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d "$HOME/godot"
+          sudo install -m 0755 "$HOME/godot/Godot_v4.5.1-stable_linux.x86_64" /usr/local/bin/godot
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_export_templates.tpz -o /tmp/godot-templates.tpz
+          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
+          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/4.5.1.stable/"
+          godot --version
+          echo "=== Export templates ==="
           ls -lah "$HOME/.local/share/godot/export_templates/4.5.1.stable/"
           test "$(cat "$HOME/.local/share/godot/export_templates/4.5.1.stable/version.txt")" = "4.5.1.stable"
           test -s "$HOME/.local/share/godot/export_templates/4.5.1.stable/android_debug.apk"
           test -s "$HOME/.local/share/godot/export_templates/4.5.1.stable/android_release.apk"
           test -s "$HOME/.local/share/godot/export_templates/4.5.1.stable/android_source.zip"
 
-      - name: Configure Godot Android SDK paths
+      - name: Prepare Android debug keystore and configure Godot
         run: |
-          mkdir -p "$HOME/.config/godot"
+          mkdir -p "$HOME/.android" "$HOME/.config/godot"
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
           cat > "$HOME/.config/godot/editor_settings-4.5.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
 
           [resource]
-          export/android/java_sdk_path = "$JAVA_HOME"
           export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
           export/android/debug_keystore = "$HOME/.android/debug.keystore"
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
           EOF
+          # Also put the debug signing values in the preset itself so validation
+          # does not depend on fallback behavior in EditorSettings.
+          sed -i "s|package/signed=true|package/signed=true\\nkeystore/debug=\\"$HOME/.android/debug.keystore\\"\\nkeystore/debug_user=\\"androiddebugkey\\"\\nkeystore/debug_password=\\"android\\"|" export_presets.cfg
+          echo "=== Godot Android settings ==="
           cat "$HOME/.config/godot/editor_settings-4.5.tres"
-
-      - name: Inspect and install Android SDK components
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "JAVA_HOME=$JAVA_HOME"
-          echo "SDK directory overview:"
-          find "$ANDROID_HOME" -maxdepth 3 -type d 2>/dev/null | sort | head -200 || true
-          SDKMANAGER="$(find "$ANDROID_HOME" /opt -type f -name sdkmanager 2>/dev/null | head -1)"
-          if [ -z "$SDKMANAGER" ]; then
-            echo "::error::sdkmanager was not found under $ANDROID_HOME or /opt"
-            find /usr -type f -name sdkmanager 2>/dev/null | head -50 || true
-            exit 1
-          fi
-          echo "Using sdkmanager: $SDKMANAGER"
-          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
-          # The base image ships a broken platform-tools-2 package location. Remove both
-          # copies so sdkmanager installs adb into the path Godot expects.
-          rm -rf "$ANDROID_HOME/platform-tools" "$ANDROID_HOME/platform-tools-2"
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-35" "build-tools;35.0.1"
-          if [ ! -x "$ANDROID_HOME/platform-tools/adb" ] && [ -x "$ANDROID_HOME/platform-tools-2/adb" ]; then
-            mv "$ANDROID_HOME/platform-tools-2" "$ANDROID_HOME/platform-tools"
-          fi
-          test -x "$ANDROID_HOME/platform-tools/adb"
-          test -d "$ANDROID_HOME/platforms/android-35"
-          test -d "$ANDROID_HOME/build-tools/35.0.1"
-          ls -la "$ANDROID_HOME/platform-tools"
-          ls -la "$ANDROID_HOME/platforms"
-          ls -la "$ANDROID_HOME/build-tools"
-
-      - name: Prepare Android debug signing key
-        run: |
-          mkdir -p "$HOME/.android"
-          if [ ! -s "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
-          fi
+          grep -E '^(keystore/debug|keystore/debug_user|keystore/debug_password)=' export_presets.cfg
           test -s "$HOME/.android/debug.keystore"
 
-      - name: Verify project files
-        run: |
-          test -f project.godot
-          test -f scenes/main.tscn
-          test -f scripts/main.gd
-          test -f export_presets.cfg
-          echo "Project files found."
-
       - name: Validate Godot project
-        run: godot --headless --editor --path . --quit
+        run: |
+          godot --headless --verbose --editor --path . --quit 2>&1 | tee /tmp/godot-validation.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script" /tmp/godot-validation.log; then
+            echo "Godot reported a script loading or parse error."
+            exit 1
+          fi
 
       - name: Export Android ARM64 APK
-        env:
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /github/home/.android/debug.keystore
-          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          # Put signing values directly into the export preset as well as the
-          # environment: Godot validates preset configuration before exporting.
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          path = Path("export_presets.cfg")
-          content = path.read_text()
-          home = os.environ["HOME"]
-          key = f'{home}/.android/debug.keystore'
-          signing = (
-              f'keystore/debug="{key}"\n'
-              'keystore/debug_user="androiddebugkey"\n'
-              'keystore/debug_password="android"\n'
-              f'keystore/release="{key}"\n'
-              'keystore/release_user="androiddebugkey"\n'
-              'keystore/release_password="android"\n'
-          )
-          if 'keystore/debug="' not in content:
-              content = content.replace('package/signed=true\n', 'package/signed=true\n' + signing, 1)
-          path.write_text(content)
-          PY
-          grep -E '^(keystore/(debug|release))' export_presets.cfg
+          echo "=== Java and Android SDK ==="
+          java -version
+          ls -ld "$JAVA_HOME" "$ANDROID_HOME" "$ANDROID_HOME/platform-tools" "$ANDROID_HOME/platforms/android-35" "$ANDROID_HOME/build-tools/35.0.0"
+          ls -l "$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          echo "=== Export Android debug APK ==="
           mkdir -p build
-          godot --headless --verbose --path . --export-debug "Android" build/DEEPWILD-Shattered-Lands.apk
+          godot --headless --verbose --path . --export-debug "Android" build/DEEPWILD-Shattered-Lands.apk 2>&1 | tee /tmp/godot-android-export.log
 
       - name: Verify APK
         run: |
           test -s build/DEEPWILD-Shattered-Lands.apk
           file build/DEEPWILD-Shattered-Lands.apk
           ls -lh build/DEEPWILD-Shattered-Lands.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging build/DEEPWILD-Shattered-Lands.apk | head -n 8
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
