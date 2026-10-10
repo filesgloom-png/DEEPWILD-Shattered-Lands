@@ -37,6 +37,8 @@ var message := "Welcome to the Shattered Lands"
 var message_timer := 4.0
 var save_timer := 0.0
 var world_seed := 0
+var player_respawn := Vector2(320.0, 240.0)
+var checkpoint_tile := -1
 
 func _ready() -> void:
 	randomize()
@@ -111,11 +113,7 @@ func _update_slimes(delta: float) -> void:
 		slime.y = _ground_surface_y(int(floor(slime.x / TILE))) - 12.0
 		slimes[i] = slime
 	if health <= 0:
-		health = 100
-		player = Vector2(320.0, _ground_surface_y(int(floor(320.0 / TILE))))
-		velocity = Vector2.ZERO
-		message = "You recovered at the camp"
-		message_timer = 3.0
+		_respawn_player()
 
 func _noise_value(x: int, salt: int) -> float:
 	var value := sin(float(x * 127 + int(world_seed % 997) + salt * 31) * 12.9898) * 43758.5453
@@ -347,6 +345,8 @@ func _handle_action_touch(pos: Vector2) -> void:
 		_next_recipe()
 	elif pos.distance_to(Vector2(size.x - 72, 242)) < 45.0:
 		_use_selected_item()
+	elif pos.distance_to(Vector2(size.x - 72, 326)) < 45.0:
+		_set_checkpoint()
 
 func _next_recipe() -> void:
 	craft_recipe_index = (craft_recipe_index + 1) % RECIPES.size()
@@ -387,6 +387,24 @@ func _use_selected_item() -> void:
 		message = "Plank placed"
 		message_timer = 1.5
 	message_timer = maxf(message_timer, 1.5)
+
+func _set_checkpoint() -> void:
+	var tile_x: int = clampi(int(floor(player.x / TILE)), 0, WORLD_WIDTH - 1)
+	checkpoint_tile = tile_x
+	player_respawn = Vector2(float(tile_x * TILE) + TILE * 0.5, _ground_surface_y(tile_x))
+	message = "Checkpoint set"
+	message_timer = 1.5
+
+func _respawn_player() -> void:
+	var respawn_x: float = player_respawn.x
+	if checkpoint_tile >= 0:
+		respawn_x = float(checkpoint_tile * TILE) + TILE * 0.5
+	player.x = clampf(respawn_x, 24.0, WORLD_WIDTH * TILE - 24.0)
+	player.y = _ground_surface_y(int(floor(player.x / TILE)))
+	velocity = Vector2.ZERO
+	health = 100
+	message = "Respawned at checkpoint"
+	message_timer = 2.0
 
 func _craft_selected() -> void:
 	var recipe: String = str(RECIPES[craft_recipe_index])
@@ -579,6 +597,7 @@ func _draw_controls(size: Vector2) -> void:
 	_draw_button(Vector2(size.x - 72, 74), "MAKE", Color(0.32, 0.56, 0.39))
 	_draw_button(Vector2(size.x - 72, 158), "NEXT", Color(0.40, 0.48, 0.57))
 	_draw_button(Vector2(size.x - 72, 242), "USE", Color(0.68, 0.46, 0.25))
+	_draw_button(Vector2(size.x - 72, 326), "CAMP", Color(0.43, 0.58, 0.35))
 
 func _draw_button(center: Vector2, label: String, color: Color) -> void:
 	draw_circle(center, 36, Color(0.04, 0.06, 0.07, 0.52))
@@ -586,7 +605,7 @@ func _draw_button(center: Vector2, label: String, color: Color) -> void:
 	draw_string(ThemeDB.fallback_font, center + Vector2(0, 5), label, HORIZONTAL_ALIGNMENT_CENTER, 72, 12, Color.WHITE)
 
 func _save_world() -> void:
-	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
+	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "checkpoint_tile": checkpoint_tile, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
 	for slime in slimes:
 		data["slimes"].append([slime.x, slime.y])
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -607,6 +626,10 @@ func _load_world() -> void:
 	health = int(parsed.get("health", 100))
 	day_count = maxi(1, int(parsed.get("day_count", 1)))
 	day_time = fposmod(float(parsed.get("day_time", day_time)), TAU)
+	checkpoint_tile = int(parsed.get("checkpoint_tile", -1))
+	if checkpoint_tile >= 0:
+		checkpoint_tile = clampi(checkpoint_tile, 0, WORLD_WIDTH - 1)
+		player_respawn = Vector2(float(checkpoint_tile * TILE) + TILE * 0.5, _ground_surface_y(checkpoint_tile))
 	var saved_inventory = parsed.get("inventory", {})
 	for key in inventory:
 		inventory[key] = int(saved_inventory.get(key, inventory[key]))
