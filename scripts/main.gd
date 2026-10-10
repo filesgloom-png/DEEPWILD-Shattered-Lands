@@ -908,8 +908,9 @@ func _draw_world(size: Vector2) -> void:
 				# Small plants are only drawn when their short silhouettes can reach the viewport.
 				_draw_ground_flora(px, ground_screen_y, biome, tx, flora_seed_offset)
 			# Placed lights and campfires extend at most 34 px above the surface.
-			# Skip their draw calls when that entire footprint is outside the screen.
-			if ground_screen_y >= -36.0 and ground_screen_y <= size.y + 36.0:
+			# Their widest horizontal footprint is the torch glow (px - 13 to px + 37).
+			# Skip object lookups and draw calls when the full footprint is off-screen.
+			if ground_screen_y >= -36.0 and ground_screen_y <= size.y + 36.0 and px + 37.0 >= 0.0 and px - 13.0 <= size.x:
 				var object_key: String = str(tx)
 				if placed_objects.has(object_key):
 					var object_kind: String = str(placed_objects[object_key])
