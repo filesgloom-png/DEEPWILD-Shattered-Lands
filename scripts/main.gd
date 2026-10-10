@@ -638,6 +638,16 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		var band_color := Color(0.08, 0.13, 0.23).lerp(Color(0.42, 0.72, 0.91), sun)
 		band_color.a = 0.035
 		draw_rect(Rect2(0, float(band) * size.y / 6.0, size.x, size.y / 6.0 + 1.0), band_color)
+	# Sparse twinkling stars fade in at dusk; deterministic positions avoid random work each frame.
+	var night_strength := clampf((0.42 - sun) / 0.42, 0.0, 1.0)
+	if night_strength > 0.0:
+		for i in range(34):
+			var star_x := fposmod(float(i * 137 + 41) - camera_offset.x * 0.012, size.x)
+			var star_y := float((i * 67 + 23) % maxi(1, int(size.y * 0.42))) + 8.0
+			var twinkle := 0.45 + 0.55 * ((sin(day_time * 4.0 + float(i) * 2.13) + 1.0) * 0.5)
+			var star_alpha := night_strength * twinkle * 0.78
+			var star_radius := 1.0 if i % 4 != 0 else 1.6
+			draw_circle(Vector2(star_x, star_y), star_radius, Color(0.82, 0.91, 1.0, star_alpha))
 	# Two distant parallax layers add depth while keeping the game lightweight.
 	for i in range(9):
 		var x := fposmod(float(i * 210) - camera_offset.x * 0.10, size.x + 300.0) - 150.0
