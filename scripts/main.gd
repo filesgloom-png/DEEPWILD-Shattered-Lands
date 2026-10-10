@@ -103,6 +103,7 @@ var harvested_trees: Dictionary = {}
 var tree_health: Dictionary = {}
 var placed_objects: Dictionary = {}
 var craft_recipe_index := 0
+var active_panel := ""
 var slimes: Array[Vector2] = []
 var health := 100
 var day_time := 0.0
@@ -492,7 +493,9 @@ func _input(event: InputEvent) -> void:
 	var size := get_viewport_rect().size
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			if event.position.x < size.x * 0.46 and joystick_id == -1:
+			if active_panel != "":
+				_handle_panel_touch(event.position)
+			elif event.position.x < size.x * 0.46 and joystick_id == -1:
 				joystick_id = event.index
 				joystick_origin = event.position
 				joystick_current = event.position
@@ -508,7 +511,9 @@ func _input(event: InputEvent) -> void:
 		_update_joystick_axis()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
-			if event.position.x < size.x * 0.46:
+			if active_panel != "":
+				_handle_panel_touch(event.position)
+			elif event.position.x < size.x * 0.46:
 				mouse_joystick = true
 				joystick_origin = event.position
 				joystick_current = event.position
@@ -542,7 +547,7 @@ func _handle_action_touch(pos: Vector2) -> void:
 	var nearest_distance := INF
 	# Use circular targets for the large action buttons and thumb-friendly
 	# rectangular targets for utility chips; normalized distance resolves overlaps.
-	for i in range(7):
+	for i in range(6):
 		var center: Vector2
 		var action: String
 		var target_distance: float
@@ -553,7 +558,7 @@ func _handle_action_touch(pos: Vector2) -> void:
 			target_distance = pos.distance_to(center) / radius
 		else:
 			center = _utility_button_center(size, i - 3)
-			action = ["craft", "recipe", "use", "point"][i - 3]
+			action = ["inventory", "craft", "use"][i - 3]
 			var local_pos := pos - center
 			target_distance = Vector2(local_pos.x / 55.0, local_pos.y / 25.0).length()
 		if target_distance <= 1.0 and target_distance < nearest_distance:
@@ -570,12 +575,12 @@ func _handle_action_touch(pos: Vector2) -> void:
 		"mine":
 			_flash_control("mine")
 			mine_requested = true
+		"inventory":
+			_flash_control("inventory")
+			active_panel = "inventory"
 		"craft":
 			_flash_control("craft")
-			_craft_selected()
-		"recipe":
-			_flash_control("recipe")
-			_next_recipe()
+			active_panel = "craft"
 		"use":
 			_flash_control("use")
 			_use_selected_item()
@@ -807,6 +812,8 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	_draw_hud(size)
 	_draw_controls(size)
+	if active_panel != "":
+		_draw_panel(size)
 
 func _draw_scenery(size: Vector2, sun: float) -> void:
 	var horizon := size.y * 0.54 - camera_offset.y * 0.04
@@ -1206,6 +1213,87 @@ func _draw_hud(size: Vector2) -> void:
 		draw_rect(Rect2((size.x - width) * 0.5, 34, width, 38), Color(0.05, 0.07, 0.08, 0.82))
 		draw_string(ThemeDB.fallback_font, Vector2(size.x * 0.5, 59), message, HORIZONTAL_ALIGNMENT_CENTER, width - 16, 16, Color(1.0, 0.91, 0.69))
 
+func _handle_panel_touch(pos: Vector2) -> void:
+	var size := get_viewport_rect().size
+	var panel_size := Vector2(minf(size.x - 36.0, 720.0), minf(size.y - 48.0, 500.0))
+	var panel_origin := (size - panel_size) * 0.5
+	if Rect2(panel_origin.x + panel_size.x - 58.0, panel_origin.y + 12.0, 42.0, 36.0).has_point(pos):
+		active_panel = ""
+		return
+	if active_panel == "craft":
+		var list_left := panel_origin.x + 18.0
+		var list_top := panel_origin.y + 72.0
+		for i in range(RECIPES.size()):
+			var recipe_rect := Rect2(list_left, list_top + float(i) * 44.0, minf(290.0, panel_size.x * 0.45), 40.0)
+			if recipe_rect.has_point(pos):
+				craft_recipe_index = i
+				return
+		var craft_rect := Rect2(panel_origin.x + panel_size.x - 190.0, panel_origin.y + panel_size.y - 70.0, 160.0, 48.0)
+		if craft_rect.has_point(pos):
+			_craft_selected()
+
+func _draw_panel(size: Vector2) -> void:
+	var panel_size := Vector2(minf(size.x - 36.0, 720.0), minf(size.y - 48.0, 500.0))
+	var panel_origin := (size - panel_size) * 0.5
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.01, 0.025, 0.035, 0.68))
+	draw_rect(Rect2(panel_origin + Vector2(5.0, 6.0), panel_size), Color(0.0, 0.0, 0.0, 0.42))
+	draw_rect(Rect2(panel_origin, panel_size), Color(0.055, 0.085, 0.095, 0.98))
+	draw_rect(Rect2(panel_origin, panel_size), Color(0.48, 0.63, 0.56), false, 3.0)
+	draw_rect(Rect2(panel_origin + Vector2(4.0, 4.0), Vector2(panel_size.x - 8.0, 48.0)), Color(0.12, 0.20, 0.20))
+	var title := "INVENTORY" if active_panel == "inventory" else "CRAFTING"
+	draw_string(ThemeDB.fallback_font, panel_origin + Vector2(22.0, 35.0), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(0.94, 0.82, 0.55))
+	draw_rect(Rect2(panel_origin.x + panel_size.x - 58.0, panel_origin.y + 12.0, 42.0, 36.0), Color(0.43, 0.19, 0.17))
+	draw_string(ThemeDB.fallback_font, panel_origin + Vector2(panel_size.x - 47.0, 37.0), "X", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color.WHITE)
+	if active_panel == "inventory":
+		var items: Array = inventory.keys()
+		var col_width := (panel_size.x - 48.0) * 0.5
+		for i in range(items.size()):
+			var col := i % 2
+			var line := int(i / 2)
+			var item_rect := Rect2(panel_origin.x + 18.0 + float(col) * col_width, panel_origin.y + 72.0 + float(line) * 45.0, col_width - 10.0, 38.0)
+			draw_rect(item_rect, Color(0.12, 0.17, 0.17) if int(inventory[items[i]]) > 0 else Color(0.075, 0.11, 0.12))
+			draw_rect(item_rect, Color(0.31, 0.43, 0.40), false, 1.0)
+			draw_string(ThemeDB.fallback_font, item_rect.position + Vector2(10.0, 24.0), str(items[i]), HORIZONTAL_ALIGNMENT_LEFT, col_width - 70.0, 13, Color(0.91, 0.93, 0.85))
+			draw_string(ThemeDB.fallback_font, item_rect.position + Vector2(item_rect.size.x - 38.0, 24.0), "x%d" % int(inventory[items[i]]), HORIZONTAL_ALIGNMENT_RIGHT, 30.0, 14, Color(0.98, 0.80, 0.43))
+	else:
+		var list_left := panel_origin.x + 18.0
+		var list_top := panel_origin.y + 72.0
+		for i in range(RECIPES.size()):
+			var recipe_rect := Rect2(list_left, list_top + float(i) * 44.0, minf(290.0, panel_size.x * 0.45), 40.0)
+			var chosen := i == craft_recipe_index
+			draw_rect(recipe_rect, Color(0.26, 0.36, 0.30) if chosen else Color(0.10, 0.15, 0.16))
+			draw_rect(recipe_rect, Color(0.82, 0.68, 0.39) if chosen else Color(0.27, 0.39, 0.37), false, 2.0 if chosen else 1.0)
+			draw_string(ThemeDB.fallback_font, recipe_rect.position + Vector2(10.0, 25.0), str(RECIPES[i]), HORIZONTAL_ALIGNMENT_LEFT, recipe_rect.size.x - 18.0, 14, Color(0.98, 0.91, 0.70) if chosen else Color(0.86, 0.91, 0.85))
+		var detail_x := panel_origin.x + minf(330.0, panel_size.x * 0.51)
+		var detail_width := panel_origin.x + panel_size.x - detail_x - 20.0
+		draw_string(ThemeDB.fallback_font, Vector2(detail_x, panel_origin.y + 105.0), str(RECIPES[craft_recipe_index]), HORIZONTAL_ALIGNMENT_LEFT, detail_width, 21, Color(0.98, 0.82, 0.48))
+		draw_string(ThemeDB.fallback_font, Vector2(detail_x, panel_origin.y + 142.0), "REQUIRED MATERIALS", HORIZONTAL_ALIGNMENT_LEFT, detail_width, 13, Color(0.63, 0.81, 0.72))
+		var requirement_lines := _recipe_requirements(str(RECIPES[craft_recipe_index]))
+		for i in range(requirement_lines.size()):
+			draw_string(ThemeDB.fallback_font, Vector2(detail_x, panel_origin.y + 170.0 + float(i) * 28.0), requirement_lines[i], HORIZONTAL_ALIGNMENT_LEFT, detail_width, 15, Color(0.88, 0.91, 0.82))
+		var craft_rect := Rect2(panel_origin.x + panel_size.x - 190.0, panel_origin.y + panel_size.y - 70.0, 160.0, 48.0)
+		draw_rect(craft_rect, Color(0.20, 0.52, 0.34))
+		draw_rect(craft_rect, Color(0.62, 0.85, 0.62), false, 2.0)
+		draw_string(ThemeDB.fallback_font, craft_rect.position + Vector2(22.0, 30.0), "CRAFT ITEM", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
+
+func _recipe_requirements(recipe: String) -> Array[String]:
+	match recipe:
+		"Torch":
+			return ["Wood: %d / 2" % int(inventory["Wood"]), "Stone: %d / 1" % int(inventory["Stone"]), "Output: 3 Torches"]
+		"Planks":
+			return ["Wood: %d / 2" % int(inventory["Wood"]), "Output: 4 Planks"]
+		"Stone Block":
+			return ["Stone: %d / 3" % int(inventory["Stone"]), "Output: 2 Stone Blocks"]
+		"Stone Pickaxe":
+			return ["Wood: %d / 3" % int(inventory["Wood"]), "Stone: %d / 4" % int(inventory["Stone"]), "Output: 1 Pickaxe"]
+		"Stone Axe":
+			return ["Wood: %d / 3" % int(inventory["Wood"]), "Stone: %d / 2" % int(inventory["Stone"]), "Output: 1 Axe"]
+		"Campfire":
+			return ["Wood: %d / 4" % int(inventory["Wood"]), "Stone: %d / 3" % int(inventory["Stone"]), "Output: 1 Campfire"]
+		"Healing Salve":
+			return ["Wild Essence: %d / 2" % int(inventory["Wild Essence"]), "Wood: %d / 1" % int(inventory["Wood"]), "Output: 1 Salve"]
+	return ["No recipe data"]
+
 func _draw_controls(size: Vector2) -> void:
 	# Floating joystick appears beneath the left thumb instead of forcing a fixed touch point.
 	var center := _joystick_center(size)
@@ -1238,8 +1326,8 @@ func _draw_controls(size: Vector2) -> void:
 	_draw_action_button(_main_button_center(size, 2), "MINE", Color(0.68, 0.49, 0.23), 36.0, "mine")
 
 	# Utility actions stay small and readable; the last one marks a respawn checkpoint.
-	_draw_utility_chip(_utility_button_center(size, 0), "CRAFT", Color(0.29, 0.62, 0.43))
-	_draw_utility_chip(_utility_button_center(size, 1), "RECIPE", Color(0.42, 0.53, 0.61))
+	_draw_utility_chip(_utility_button_center(size, 0), "BAG", Color(0.29, 0.62, 0.43))
+	_draw_utility_chip(_utility_button_center(size, 1), "CRAFT", Color(0.42, 0.53, 0.61))
 	_draw_utility_chip(_utility_button_center(size, 2), "USE", Color(0.76, 0.48, 0.25))
 	_draw_utility_chip(_utility_button_center(size, 3), "POINT", Color(0.40, 0.63, 0.43))
 
