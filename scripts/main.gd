@@ -364,7 +364,7 @@ func _input(event: InputEvent) -> void:
 		if event.pressed:
 			if event.position.x < size.x * 0.46 and joystick_id == -1:
 				joystick_id = event.index
-				joystick_origin = _joystick_center(size)
+				joystick_origin = event.position
 				joystick_current = event.position
 				_update_joystick_axis()
 			else:
@@ -380,7 +380,7 @@ func _input(event: InputEvent) -> void:
 		if event.pressed:
 			if event.position.x < size.x * 0.46:
 				mouse_joystick = true
-				joystick_origin = _joystick_center(size)
+				joystick_origin = event.position
 				joystick_current = event.position
 				_update_joystick_axis()
 			else:
@@ -400,11 +400,10 @@ func _input(event: InputEvent) -> void:
 			jump_requested = true
 
 func _update_joystick_axis() -> void:
-	var size := get_viewport_rect().size
-	var delta := joystick_current.x - _joystick_center(size).x
-	var travel := clampf(delta, -44.0, 44.0)
-	move_axis = travel / 44.0
-	if absf(travel) < 9.0:
+	var delta := joystick_current.x - joystick_origin.x
+	var travel := clampf(delta, -52.0, 52.0)
+	move_axis = travel / 52.0
+	if absf(travel) < 10.0:
 		move_axis = 0.0
 
 func _handle_action_touch(pos: Vector2) -> void:
@@ -814,8 +813,11 @@ func _draw_hud(size: Vector2) -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(size.x * 0.5, 59), message, HORIZONTAL_ALIGNMENT_CENTER, width - 16, 16, Color(1.0, 0.91, 0.69))
 
 func _draw_controls(size: Vector2) -> void:
-	# Left thumbstick: restrained dark glass with a clear movement direction.
+	# Floating joystick appears beneath the left thumb instead of forcing a fixed touch point.
 	var center := _joystick_center(size)
+	var active := joystick_id != -1 or mouse_joystick
+	if active:
+		center = joystick_origin
 	draw_circle(center, 57.0, Color(0.025, 0.045, 0.055, 0.48))
 	draw_arc(center, 51.0, 0.0, TAU, 48, Color(0.55, 0.72, 0.72, 0.38), 2.0, true)
 	draw_circle(center, 35.0, Color(0.16, 0.24, 0.26, 0.72))
@@ -825,7 +827,12 @@ func _draw_controls(size: Vector2) -> void:
 		var inner := center + Vector2(cos(angle), sin(angle)) * 43.0
 		var outer := center + Vector2(cos(angle), sin(angle)) * 48.0
 		draw_line(inner, outer, Color(0.72, 0.84, 0.79, 0.45), 2.0)
-	var knob := center + Vector2(clampf(move_axis, -1.0, 1.0) * 25.0, 0.0)
+	var knob := center
+	if active:
+		var drag := joystick_current - joystick_origin
+		drag.x = clampf(drag.x, -30.0, 30.0)
+		drag.y = clampf(drag.y, -30.0, 30.0)
+		knob += drag
 	draw_circle(knob + Vector2(0, 3), 22.0, Color(0.0, 0.0, 0.0, 0.25))
 	draw_circle(knob, 21.0, Color(0.66, 0.83, 0.77, 0.88))
 	draw_arc(knob, 16.0, 3.4, 6.0, 20, Color(0.93, 1.0, 0.92, 0.58), 1.5, true)
@@ -836,11 +843,11 @@ func _draw_controls(size: Vector2) -> void:
 	_draw_action_button(_main_button_center(size, 1), "HIT", hit_color, 44.0, "hit")
 	_draw_action_button(_main_button_center(size, 2), "MINE", Color(0.68, 0.49, 0.23), 36.0, "mine")
 
-	# Utility actions are slim glass chips instead of four oversized circles.
+	# Utility actions stay small and readable; the last one marks a respawn checkpoint.
 	_draw_utility_chip(_utility_button_center(size, 0), "CRAFT", Color(0.29, 0.62, 0.43))
 	_draw_utility_chip(_utility_button_center(size, 1), "RECIPE", Color(0.42, 0.53, 0.61))
 	_draw_utility_chip(_utility_button_center(size, 2), "USE", Color(0.76, 0.48, 0.25))
-	_draw_utility_chip(_utility_button_center(size, 3), "SAVE", Color(0.40, 0.63, 0.43))
+	_draw_utility_chip(_utility_button_center(size, 3), "POINT", Color(0.40, 0.63, 0.43))
 
 func _joystick_center(size: Vector2) -> Vector2:
 	return Vector2(91.0, size.y - 92.0)
