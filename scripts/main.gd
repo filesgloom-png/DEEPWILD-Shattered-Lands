@@ -226,6 +226,9 @@ func _update_slimes(delta: float) -> void:
 			slime.x += signf(distance) * 42.0 * delta
 		if absf(distance) < 30.0 and absf(player.y - slime.y) < 45.0 and slime_damage_cooldown <= 0.0:
 			health = maxi(0, health - 8)
+			# A small immediate shove gives contact damage readable physical feedback.
+			var knockback_direction := -1.0 if slime.x < player.x else 1.0
+			player.x = clampf(player.x + knockback_direction * 26.0, 24.0, WORLD_WIDTH * TILE - 24.0)
 			impact_position = player
 			impact_kind = "damage"
 			impact_timer = 0.24
