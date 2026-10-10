@@ -27,6 +27,7 @@ var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Sno
 var world_blocks: Dictionary = {}
 var harvested_trees: Dictionary = {}
 var tree_health: Dictionary = {}
+var placed_objects: Dictionary = {}
 var craft_recipe_index := 0
 var slimes: Array[Vector2] = []
 var health := 100
@@ -250,6 +251,8 @@ func _mine_block() -> void:
 			drop = "Sand"
 		elif kind == "snow":
 			drop = "Snow"
+		elif kind == "planks":
+			drop = "Planks"
 		var added := _add_item(drop, 1)
 		message = "+%d %s" % [added, drop] if added > 0 else "Inventory stack full"
 		message_timer = 1.2
@@ -328,11 +331,48 @@ func _handle_action_touch(pos: Vector2) -> void:
 		_craft_selected()
 	elif pos.distance_to(Vector2(size.x - 72, 158)) < 45.0:
 		_next_recipe()
+	elif pos.distance_to(Vector2(size.x - 72, 242)) < 45.0:
+		_use_selected_item()
 
 func _next_recipe() -> void:
 	craft_recipe_index = (craft_recipe_index + 1) % RECIPES.size()
 	message = "Recipe: " + RECIPES[craft_recipe_index]
 	message_timer = 1.4
+
+func _use_selected_item() -> void:
+	var recipe: String = str(RECIPES[craft_recipe_index])
+	var player_tile: int = int(floor(player.x / TILE))
+	var target_tx: int = clampi(player_tile + facing, 0, WORLD_WIDTH - 1)
+	var target_ty: int = int(floor((player.y + 10.0) / TILE))
+	if recipe == "Torch" or recipe == "Campfire":
+		if int(inventory.get(recipe, 0)) <= 0:
+			message = "No " + recipe + " in inventory"
+			message_timer = 1.5
+			return
+		var object_key: String = str(target_tx)
+		if placed_objects.has(object_key):
+			message = "There is already an object here"
+			message_timer = 1.5
+			return
+		_remove_item(recipe, 1)
+		placed_objects[object_key] = recipe
+		message = recipe + " placed"
+		message_timer = 1.5
+	elif recipe == "Planks":
+		if int(inventory.get("Planks", 0)) <= 0:
+			message = "No Planks in inventory"
+			message_timer = 1.5
+			return
+		var block_key: String = str(target_tx) + ":" + str(target_ty)
+		if block_type(target_tx, target_ty) != "":
+			message = "Target block is occupied"
+			message_timer = 1.5
+			return
+		_remove_item("Planks", 1)
+		world_blocks[block_key] = "planks"
+		message = "Plank placed"
+		message_timer = 1.5
+	message_timer = maxf(message_timer, 1.5)
 
 func _craft_selected() -> void:
 	var recipe: String = str(RECIPES[craft_recipe_index])
@@ -418,6 +458,8 @@ func _draw_world(size: Vector2) -> void:
 				color = Color(0.49, 0.63, 0.68)
 			elif kind == "copper_ore":
 				color = Color(0.43, 0.36, 0.34)
+			elif kind == "planks":
+				color = Color(0.63, 0.39, 0.20)
 			elif kind == "stone":
 				color = Color(0.35, 0.37, 0.40)
 			elif kind == "bedrock":
@@ -440,6 +482,19 @@ func _draw_world(size: Vector2) -> void:
 				_draw_pine(px, ground_screen_y)
 			else:
 				_draw_tree(px, ground_screen_y)
+		var object_key: String = str(tx)
+		if placed_objects.has(object_key):
+			var object_kind: String = str(placed_objects[object_key])
+			if object_kind == "Torch":
+				draw_circle(Vector2(px + 12, ground_screen_y - 24), 25.0, Color(1.0, 0.62, 0.20, 0.16))
+				draw_rect(Rect2(px + 10, ground_screen_y - 25, 4, 25), Color(0.43, 0.28, 0.16))
+				draw_rect(Rect2(px + 9, ground_screen_y - 30, 6, 8), Color(1.0, 0.56, 0.16))
+				draw_rect(Rect2(px + 11, ground_screen_y - 34, 3, 5), Color(1.0, 0.85, 0.35))
+			elif object_kind == "Campfire":
+				draw_rect(Rect2(px + 2, ground_screen_y - 5, 20, 5), Color(0.29, 0.19, 0.13))
+				draw_rect(Rect2(px + 4, ground_screen_y - 10, 16, 4), Color(0.45, 0.27, 0.15))
+				draw_colored_polygon(PackedVector2Array([Vector2(px + 7, ground_screen_y - 8), Vector2(px + 12, ground_screen_y - 24), Vector2(px + 18, ground_screen_y - 8)]), Color(1.0, 0.39, 0.10))
+				draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), Color(1.0, 0.78, 0.22))
 
 func _draw_cactus(x: float, y: float) -> void:
 	draw_rect(Rect2(x + 9, y - 45, 7, 45), Color(0.18, 0.49, 0.29))
@@ -509,6 +564,7 @@ func _draw_controls(size: Vector2) -> void:
 	_draw_button(base + Vector2(-112, -112), "MINE", Color(0.68, 0.53, 0.25))
 	_draw_button(Vector2(size.x - 72, 74), "MAKE", Color(0.32, 0.56, 0.39))
 	_draw_button(Vector2(size.x - 72, 158), "NEXT", Color(0.40, 0.48, 0.57))
+	_draw_button(Vector2(size.x - 72, 242), "USE", Color(0.68, 0.46, 0.25))
 
 func _draw_button(center: Vector2, label: String, color: Color) -> void:
 	draw_circle(center, 36, Color(0.04, 0.06, 0.07, 0.52))
@@ -516,7 +572,7 @@ func _draw_button(center: Vector2, label: String, color: Color) -> void:
 	draw_string(ThemeDB.fallback_font, center + Vector2(0, 5), label, HORIZONTAL_ALIGNMENT_CENTER, 72, 12, Color.WHITE)
 
 func _save_world() -> void:
-	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "craft_recipe_index": craft_recipe_index, "slimes": []}
+	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
 	for slime in slimes:
 		data["slimes"].append([slime.x, slime.y])
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -541,6 +597,7 @@ func _load_world() -> void:
 	world_blocks = parsed.get("blocks", {})
 	harvested_trees = parsed.get("harvested_trees", {})
 	tree_health = parsed.get("tree_health", {})
+	placed_objects = parsed.get("placed_objects", {})
 	craft_recipe_index = clampi(int(parsed.get("craft_recipe_index", 0)), 0, RECIPES.size() - 1)
 	slimes.clear()
 	for item in parsed.get("slimes", []):
