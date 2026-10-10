@@ -659,10 +659,15 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		draw_rect(Rect2(0, float(band) * size.y / 6.0, size.x, size.y / 6.0 + 1.0), band_color)
 	# A subtle upper-sky night veil adds depth without textures, nodes, or extra scene state.
 	var night_veil := clampf((0.48 - sun) / 0.48, 0.0, 1.0)
+	var night_veil_color := Color(0.025, 0.045, 0.12)
+	var star_base_color := Color(0.82, 0.91, 1.0)
+	var firefly_halo_color := Color(0.56, 1.0, 0.64)
+	var firefly_core_color := Color(0.72, 1.0, 0.68)
 	if night_veil > 0.0:
 		for band in range(4):
 			var veil_alpha := night_veil * (0.055 - float(band) * 0.010)
-			var veil_color := Color(0.025, 0.045, 0.12, veil_alpha)
+			var veil_color := night_veil_color
+			veil_color.a = veil_alpha
 			var veil_y := float(band) * size.y * 0.075
 			draw_rect(Rect2(0.0, veil_y, size.x, size.y * 0.075 + 1.0), veil_color)
 	# Sparse twinkling stars fade in at dusk; deterministic positions avoid random work each frame.
@@ -673,8 +678,10 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 			var star_y := float((i * 67 + 23) % maxi(1, int(size.y * 0.42))) + 8.0
 			var twinkle := 0.45 + 0.55 * ((sin(day_time * 4.0 + float(i) * 2.13) + 1.0) * 0.5)
 			var star_alpha := night_strength * twinkle * 0.78
+			var star_color := star_base_color
+			star_color.a = star_alpha
 			var star_radius := 1.0 if i % 4 != 0 else 1.6
-			draw_circle(Vector2(star_x, star_y), star_radius, Color(0.82, 0.91, 1.0, star_alpha))
+			draw_circle(Vector2(star_x, star_y), star_radius, star_color)
 	# Two distant parallax layers add depth while keeping the game lightweight.
 	# Their palette is identical across each layer, so calculate it once per frame.
 	var far_color := Color(0.20, 0.35, 0.43).lerp(Color(0.52, 0.69, 0.72), sun)
@@ -703,8 +710,12 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 			var fly_y := horizon + 18.0 + float((i * 31 + 13) % 74) - camera_offset.y * 0.02
 			var flicker := 0.35 + 0.65 * ((sin(day_time * 3.4 + float(i) * 1.71) + 1.0) * 0.5)
 			var glow_alpha := night_strength * flicker * 0.18
-			draw_circle(Vector2(fly_x, fly_y), 4.0, Color(0.56, 1.0, 0.64, glow_alpha * 0.32))
-			draw_circle(Vector2(fly_x, fly_y), 1.4, Color(0.72, 1.0, 0.68, glow_alpha))
+			var fly_halo := firefly_halo_color
+			fly_halo.a = glow_alpha * 0.32
+			var fly_core := firefly_core_color
+			fly_core.a = glow_alpha
+			draw_circle(Vector2(fly_x, fly_y), 4.0, fly_halo)
+			draw_circle(Vector2(fly_x, fly_y), 1.4, fly_core)
 	# Soft cloud clusters and a gently glowing sun/moon.
 	var cloud_highlight := Color(0.98, 1.0, 1.0, 0.22 if sun > 0.3 else 0.10)
 	var cloud_shadow := Color(0.24, 0.35, 0.48, 0.12 if sun > 0.3 else 0.08)
