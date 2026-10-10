@@ -668,6 +668,15 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		draw_rect(Rect2(0.0, horizon - 34.0, size.x, 68.0), glow_color)
 		var glow_line := Color(1.0, 0.68, 0.43, horizon_glow * 0.20)
 		draw_line(Vector2(0.0, horizon + 5.0), Vector2(size.x, horizon + 5.0), glow_line, 1.0)
+	# Tiny fireflies drift through the distant night air; deterministic and draw-only.
+	if night_strength > 0.18:
+		for i in range(9):
+			var fly_x := fposmod(float(i * 173 + 61) - camera_offset.x * 0.08, size.x + 60.0) - 30.0
+			var fly_y := horizon + 18.0 + float((i * 31 + 13) % 74) - camera_offset.y * 0.02
+			var flicker := 0.35 + 0.65 * ((sin(day_time * 3.4 + float(i) * 1.71) + 1.0) * 0.5)
+			var glow_alpha := night_strength * flicker * 0.18
+			draw_circle(Vector2(fly_x, fly_y), 4.0, Color(0.56, 1.0, 0.64, glow_alpha * 0.32))
+			draw_circle(Vector2(fly_x, fly_y), 1.4, Color(0.72, 1.0, 0.68, glow_alpha))
 	# Soft cloud clusters and a gently glowing sun/moon.
 	for i in range(5):
 		var cx := fposmod(float(i * 287) - camera_offset.x * 0.035 + 80.0, size.x + 240.0) - 120.0
