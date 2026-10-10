@@ -24,14 +24,14 @@ const EDGE_SHADOW_COLOR := Color(0.035, 0.06, 0.045, 0.24)
 const CLOUD_BASE_COLOR := Color(0.87, 0.94, 0.97)
 const CLOUD_HIGHLIGHT_COLOR := Color(0.98, 1.0, 1.0)
 const CLOUD_SHADOW_COLOR := Color(0.24, 0.35, 0.48)
-const TORCH_GLOW_COLOR := TORCH_GLOW_COLOR
-const TORCH_WOOD_COLOR := TORCH_WOOD_COLOR
-const TORCH_FLAME_COLOR := TORCH_FLAME_COLOR
-const TORCH_CORE_COLOR := TORCH_CORE_COLOR
-const CAMPFIRE_LOG_DARK_COLOR := CAMPFIRE_LOG_DARK_COLOR
-const CAMPFIRE_LOG_LIGHT_COLOR := CAMPFIRE_LOG_LIGHT_COLOR
-const CAMPFIRE_FLAME_COLOR := CAMPFIRE_FLAME_COLOR
-const CAMPFIRE_CORE_COLOR := CAMPFIRE_CORE_COLOR
+const TORCH_GLOW_COLOR := Color(1.0, 0.62, 0.20, 0.16)
+const TORCH_WOOD_COLOR := Color(0.43, 0.28, 0.16)
+const TORCH_FLAME_COLOR := Color(1.0, 0.56, 0.16)
+const TORCH_CORE_COLOR := Color(1.0, 0.85, 0.35)
+const CAMPFIRE_LOG_DARK_COLOR := Color(0.29, 0.19, 0.13)
+const CAMPFIRE_LOG_LIGHT_COLOR := Color(0.45, 0.27, 0.15)
+const CAMPFIRE_FLAME_COLOR := Color(1.0, 0.39, 0.10)
+const CAMPFIRE_CORE_COLOR := Color(1.0, 0.78, 0.22)
 # Shared flora palette: reuse immutable colors instead of constructing them per visible plant.
 const FLORA_SAND_DARK := Color(0.56, 0.39, 0.22)
 const FLORA_SAND_LIGHT := Color(0.72, 0.53, 0.30)
@@ -867,15 +867,15 @@ func _draw_world(size: Vector2) -> void:
 		if placed_objects.has(object_key):
 			var object_kind: String = str(placed_objects[object_key])
 			if object_kind == "Torch":
-				draw_circle(Vector2(px + 12, ground_screen_y - 24), 25.0, Color(1.0, 0.62, 0.20, 0.16))
-				draw_rect(Rect2(px + 10, ground_screen_y - 25, 4, 25), Color(0.43, 0.28, 0.16))
-				draw_rect(Rect2(px + 9, ground_screen_y - 30, 6, 8), Color(1.0, 0.56, 0.16))
-				draw_rect(Rect2(px + 11, ground_screen_y - 34, 3, 5), Color(1.0, 0.85, 0.35))
+				draw_circle(Vector2(px + 12, ground_screen_y - 24), 25.0, TORCH_GLOW_COLOR)
+				draw_rect(Rect2(px + 10, ground_screen_y - 25, 4, 25), TORCH_WOOD_COLOR)
+				draw_rect(Rect2(px + 9, ground_screen_y - 30, 6, 8), TORCH_FLAME_COLOR)
+				draw_rect(Rect2(px + 11, ground_screen_y - 34, 3, 5), TORCH_CORE_COLOR)
 			elif object_kind == "Campfire":
-				draw_rect(Rect2(px + 2, ground_screen_y - 5, 20, 5), Color(0.29, 0.19, 0.13))
-				draw_rect(Rect2(px + 4, ground_screen_y - 10, 16, 4), Color(0.45, 0.27, 0.15))
-				draw_colored_polygon(PackedVector2Array([Vector2(px + 7, ground_screen_y - 8), Vector2(px + 12, ground_screen_y - 24), Vector2(px + 18, ground_screen_y - 8)]), Color(1.0, 0.39, 0.10))
-				draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), Color(1.0, 0.78, 0.22))
+				draw_rect(Rect2(px + 2, ground_screen_y - 5, 20, 5), CAMPFIRE_LOG_DARK_COLOR)
+				draw_rect(Rect2(px + 4, ground_screen_y - 10, 16, 4), CAMPFIRE_LOG_LIGHT_COLOR)
+				draw_colored_polygon(PackedVector2Array([Vector2(px + 7, ground_screen_y - 8), Vector2(px + 12, ground_screen_y - 24), Vector2(px + 18, ground_screen_y - 8)]), CAMPFIRE_FLAME_COLOR)
+				draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), CAMPFIRE_CORE_COLOR)
 
 func _draw_ground_flora(x: float, y: float, biome: String, tx: int) -> void:
 	# Deterministic, sparse surface plants: no nodes or per-frame allocations.
