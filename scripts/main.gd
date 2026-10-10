@@ -40,13 +40,15 @@ var world_seed := 0
 var player_respawn := Vector2(320.0, 240.0)
 var checkpoint_tile := -1
 var campfire_heal_timer := 0.0
+var world_save_loaded := false
 
 func _ready() -> void:
 	randomize()
 	world_seed = randi()
 	_load_world()
-	if slimes.is_empty():
+	if slimes.is_empty() and not world_save_loaded:
 		slimes = [Vector2(520, 0), Vector2(890, 0), Vector2(1260, 0)]
+		_save_world()
 	for slime in slimes:
 		slime.y = _ground_surface_y(int(floor(slime.x / TILE))) - 12
 	set_process(true)
@@ -679,6 +681,7 @@ func _load_world() -> void:
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return
+	world_save_loaded = true
 	world_seed = int(parsed.get("world_seed", world_seed))
 	player = Vector2(float(parsed.get("player_x", 320.0)), float(parsed.get("player_y", 240.0)))
 	health = int(parsed.get("health", 100))
