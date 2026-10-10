@@ -22,8 +22,8 @@ var jump_requested := false
 var mine_requested := false
 var attack_requested := false
 const MAX_STACK := 99
-const RECIPES := ["Torch", "Planks", "Campfire"]
-var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Campfire": 0, "Wild Essence": 0}
+const RECIPES := ["Torch", "Planks", "Campfire", "Healing Salve"]
+var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Campfire": 0, "Wild Essence": 0, "Healing Salve": 0}
 var world_blocks: Dictionary = {}
 var harvested_trees: Dictionary = {}
 var tree_health: Dictionary = {}
@@ -374,6 +374,20 @@ func _use_selected_item() -> void:
 		placed_objects[object_key] = recipe
 		message = recipe + " placed"
 		message_timer = 1.5
+	elif recipe == "Healing Salve":
+		if int(inventory.get("Healing Salve", 0)) <= 0:
+			message = "No Healing Salve in inventory"
+			message_timer = 1.5
+			return
+		if health >= 100:
+			message = "Health is already full"
+			message_timer = 1.5
+			return
+		_remove_item("Healing Salve", 1)
+		var old_health: int = health
+		health = mini(100, health + 35)
+		message = "Healing Salve: +%d HP" % (health - old_health)
+		message_timer = 1.8
 	elif recipe == "Planks":
 		if int(inventory.get("Planks", 0)) <= 0:
 			message = "No Planks in inventory"
@@ -463,6 +477,17 @@ func _craft_selected() -> void:
 				message = "Campfire crafted"
 		else:
 			message = "Campfire: need 4 Wood + 3 Stone"
+	elif recipe == "Healing Salve":
+		if int(inventory["Wild Essence"]) >= 2 and int(inventory["Wood"]) >= 1:
+			if int(inventory["Healing Salve"]) >= MAX_STACK:
+				message = "Healing Salve stack full"
+			else:
+				_remove_item("Wild Essence", 2)
+				_remove_item("Wood", 1)
+				_add_item("Healing Salve", 1)
+				message = "Healing Salve crafted"
+		else:
+			message = "Salve: need 2 Essence + 1 Wood"
 	message_timer = 1.8
 
 func _draw() -> void:
@@ -590,7 +615,7 @@ func _draw_slimes() -> void:
 		draw_rect(Rect2(p.x + 4, p.y - 5, 4, 5), Color(0.08, 0.15, 0.12))
 
 func _draw_hud(size: Vector2) -> void:
-	draw_rect(Rect2(16, 16, 350, 164), Color(0.055, 0.08, 0.10, 0.84))
+	draw_rect(Rect2(16, 16, 350, 178), Color(0.055, 0.08, 0.10, 0.84))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 42), "DEEPWILD", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.91, 0.83, 0.57))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 65), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 	draw_rect(Rect2(62, 52, 150, 15), Color(0.28, 0.15, 0.16))
@@ -598,7 +623,8 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d STONE %d COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  CAMPFIRE %d  ESSENCE %d" % [inventory["Planks"], inventory["Campfire"], inventory["Wild Essence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 151), "Campfires restore 5 HP every 3 seconds nearby", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.75, 0.42))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 145), "SALVE %d" % inventory["Healing Salve"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 165), "Campfires restore 5 HP every 3 seconds nearby", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.75, 0.42))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
 	if message_timer > 0.0:
