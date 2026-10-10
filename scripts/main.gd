@@ -112,7 +112,7 @@ var player_respawn := Vector2(320.0, 240.0)
 var checkpoint_tile := -1
 var campfire_heal_timer := 0.0
 var slime_damage_cooldown := 0.0
-var slime_health: Dictionary = {}
+var slime_health: Array[int] = []
 var attack_cooldown := 0.0
 var slime_spawn_timer := 0.0
 var world_save_loaded := false
@@ -129,10 +129,20 @@ func _ready() -> void:
 	_load_world()
 	if slimes.is_empty() and not world_save_loaded:
 		slimes = [Vector2(520, 0), Vector2(890, 0), Vector2(1260, 0)]
+	_ensure_slime_health()
+	if slimes.size() == 3 and not world_save_loaded:
 		_save_world()
 	for slime in slimes:
 		slime.y = _ground_surface_y(int(floor(slime.x / TILE))) - 12
 	set_process(true)
+
+func _ensure_slime_health() -> void:
+	while slime_health.size() < slimes.size():
+		slime_health.append(2)
+	while slime_health.size() > slimes.size():
+		slime_health.remove_at(slime_health.size() - 1)
+	for i in range(slime_health.size()):
+		slime_health[i] = clampi(int(slime_health[i]), 1, 2)
 
 func _process(delta: float) -> void:
 	slime_damage_cooldown = maxf(0.0, slime_damage_cooldown - delta)
@@ -203,7 +213,7 @@ func _update_slimes(delta: float) -> void:
 			var spawn_tile := int(floor(spawn_x / TILE))
 			var spawn_y := _ground_surface_y(spawn_tile) - 12.0
 			slimes.append(Vector2(spawn_x, spawn_y))
-			slime_health[str(int(round(spawn_x)))] = 2
+			slime_health.append(2)
 			message = "A slime emerged nearby"
 			message_timer = 1.8
 			_save_world()
@@ -414,6 +424,7 @@ func _mine_block() -> void:
 	message_timer = 1.5
 
 func _attack() -> void:
+	_ensure_slime_health()
 	if attack_cooldown > 0.0:
 		message = "Recovering..."
 		message_timer = 0.5
@@ -425,18 +436,17 @@ func _attack() -> void:
 				message = "Wild Essence stack full; slime not defeated"
 				message_timer = 1.8
 				return
-			var slime_key := str(int(round(slimes[i].x)))
-			var hp := int(slime_health.get(slime_key, 2)) - 1
+			var hp := slime_health[i] - 1
 			impact_position = slimes[i]
 			impact_kind = "hit"
 			impact_timer = 0.26
 			if hp > 0:
-				slime_health[slime_key] = hp
+				slime_health[i] = hp
 				message = "Slime hit! %d/2" % (2 - hp)
 				message_timer = 1.0
 				_save_world()
 				return
-			slime_health.erase(slime_key)
+			slime_health.remove_at(i)
 			slimes.remove_at(i)
 			_add_item("Wild Essence", 1)
 			message = "Slime defeated! +1 Wild Essence"
@@ -1254,8 +1264,15 @@ func _load_world() -> void:
 	if int(parsed.get("save_version", 1)) < 2 and saved_recipe_index >= 4:
 		saved_recipe_index += 1
 	craft_recipe_index = clampi(saved_recipe_index, 0, RECIPES.size() - 1)
-	slime_health = parsed.get("slime_health", {})
+	var saved_slime_health: Variant = parsed.get("slime_health", [])
+	slime_health.clear()
+	# Older builds stored HP in a coordinate-keyed dictionary. Ignore it because
+	# slime coordinates move; old saves safely restore each slime at 2 HP.
+	if saved_slime_health is Array:
+		for saved_hp in saved_slime_health:
+			slime_health.append(clampi(int(saved_hp), 1, 2))
 	slimes.clear()
 	for item in parsed.get("slimes", []):
 		if item is Array and item.size() >= 2:
 			slimes.append(Vector2(float(item[0]), float(item[1])))
+	_ensure_slime_health()
