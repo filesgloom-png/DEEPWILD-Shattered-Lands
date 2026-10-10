@@ -235,6 +235,10 @@ func _chop_tree() -> bool:
 		return false
 	var key := str(best_tile)
 	var hp := int(tree_health.get(key, 3)) - 1
+	if hp <= 0 and int(inventory.get("Wood", 0)) + 3 > MAX_STACK:
+		message = "Need space for 3 Wood; tree not felled"
+		message_timer = 1.8
+		return true
 	if hp > 0:
 		tree_health[key] = hp
 		message = "Tree chopped: %d/3" % (3 - hp)
@@ -242,8 +246,8 @@ func _chop_tree() -> bool:
 	else:
 		tree_health.erase(key)
 		harvested_trees[key] = true
-		var wood_added := _add_item("Wood", 3)
-		message = "Tree felled! +%d Wood" % wood_added
+		_add_item("Wood", 3)
+		message = "Tree felled! +3 Wood"
 		message_timer = 1.8
 	_save_world()
 	return true
@@ -285,9 +289,13 @@ func _mine_block() -> void:
 func _attack() -> void:
 	for i in range(slimes.size() - 1, -1, -1):
 		if absf(slimes[i].x - (player.x + facing * 28.0)) < 62.0 and absf(slimes[i].y - player.y) < 65.0:
+			if int(inventory.get("Wild Essence", 0)) >= MAX_STACK:
+				message = "Wild Essence stack full; slime not defeated"
+				message_timer = 1.8
+				return
 			slimes.remove_at(i)
-			var essence_added := _add_item("Wild Essence", 1)
-			message = "Slime defeated! +%d Wild Essence" % essence_added
+			_add_item("Wild Essence", 1)
+			message = "Slime defeated! +1 Wild Essence"
 			message_timer = 2.0
 			_save_world()
 			return
