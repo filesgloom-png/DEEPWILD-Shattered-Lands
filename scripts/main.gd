@@ -415,24 +415,25 @@ func _handle_action_touch(pos: Vector2) -> void:
 	var size := get_viewport_rect().size
 	var nearest_action := ""
 	var nearest_distance := INF
-	# Primary hit areas overlap slightly by design; resolve the closest control
-	# so a thumb press activates the button actually nearest to the touch.
+	# Use circular targets for the large action buttons and thumb-friendly
+	# rectangular targets for utility chips; normalized distance resolves overlaps.
 	for i in range(7):
 		var center: Vector2
 		var action: String
-		var hit_radius: float
+		var target_distance: float
 		if i < 3:
 			center = _main_button_center(size, i)
 			action = ["jump", "hit", "mine"][i]
-			hit_radius = [49.0, 53.0, 48.0][i]
+			var radius: float = [49.0, 53.0, 48.0][i]
+			target_distance = pos.distance_to(center) / radius
 		else:
 			center = _utility_button_center(size, i - 3)
 			action = ["craft", "recipe", "use", "point"][i - 3]
-			hit_radius = 48.0
-		var distance := pos.distance_to(center)
-		if distance <= hit_radius and distance < nearest_distance:
+			var local_pos := pos - center
+			target_distance = Vector2(local_pos.x / 55.0, local_pos.y / 25.0).length()
+		if target_distance <= 1.0 and target_distance < nearest_distance:
 			nearest_action = action
-			nearest_distance = distance
+			nearest_distance = target_distance
 
 	match nearest_action:
 		"jump":
