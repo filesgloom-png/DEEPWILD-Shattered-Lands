@@ -104,6 +104,7 @@ var tree_health: Dictionary = {}
 var placed_objects: Dictionary = {}
 var craft_recipe_index := 0
 var active_panel := ""
+var selected_item := ""
 var slimes: Array[Vector2] = []
 var health := 100
 var day_time := 0.0
@@ -599,7 +600,7 @@ func _next_recipe() -> void:
 	message_timer = 1.4
 
 func _use_selected_item() -> void:
-	var recipe: String = str(RECIPES[craft_recipe_index])
+	var recipe: String = selected_item if selected_item != "" and int(inventory.get(selected_item, 0)) > 0 else str(RECIPES[craft_recipe_index])
 	var player_tile: int = int(floor(player.x / TILE))
 	var target_tx: int = clampi(player_tile + facing, 0, WORLD_WIDTH - 1)
 	var target_ty: int = int(floor((player.y + 10.0) / TILE))
@@ -1266,6 +1267,8 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 68), "SLIMES %d/3" % slimes.size(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(0.70, 1.0, 0.75))
+	if selected_item != "":
+		draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 105), "SELECTED: %s x%d" % [selected_item.to_upper(), int(inventory.get(selected_item, 0))], HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, Color(0.98, 0.83, 0.49))
 	var hit_status := "HIT READY" if attack_cooldown <= 0.0 else "HIT RECOVERY %.1fs" % attack_cooldown
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 86), hit_status, HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, Color(0.96, 0.78, 0.55) if attack_cooldown > 0.0 else Color(0.80, 0.95, 0.80))
 	if message_timer > 0.0:
@@ -1280,7 +1283,19 @@ func _handle_panel_touch(pos: Vector2) -> void:
 	if Rect2(panel_origin.x + panel_size.x - 58.0, panel_origin.y + 12.0, 42.0, 36.0).has_point(pos):
 		active_panel = ""
 		return
-	if active_panel == "craft":
+	if active_panel == "inventory":
+		var items: Array = inventory.keys()
+		var col_width := (panel_size.x - 48.0) * 0.5
+		for i in range(items.size()):
+			var col := i % 2
+			var line := int(i / 2)
+			var item_rect := Rect2(panel_origin.x + 18.0 + float(col) * col_width, panel_origin.y + 72.0 + float(line) * 45.0, col_width - 10.0, 38.0)
+			if item_rect.has_point(pos):
+				selected_item = str(items[i])
+				message = "Selected: " + selected_item
+				message_timer = 1.2
+				return
+	elif active_panel == "craft":
 		var list_left := panel_origin.x + 18.0
 		var list_top := panel_origin.y + 72.0
 		for i in range(RECIPES.size()):
@@ -1311,8 +1326,8 @@ func _draw_panel(size: Vector2) -> void:
 			var col := i % 2
 			var line := int(i / 2)
 			var item_rect := Rect2(panel_origin.x + 18.0 + float(col) * col_width, panel_origin.y + 72.0 + float(line) * 45.0, col_width - 10.0, 38.0)
-			draw_rect(item_rect, Color(0.12, 0.17, 0.17) if int(inventory[items[i]]) > 0 else Color(0.075, 0.11, 0.12))
-			draw_rect(item_rect, Color(0.31, 0.43, 0.40), false, 1.0)
+			draw_rect(item_rect, Color(0.22, 0.34, 0.25) if str(items[i]) == selected_item else (Color(0.12, 0.17, 0.17) if int(inventory[items[i]]) > 0 else Color(0.075, 0.11, 0.12)))
+			draw_rect(item_rect, Color(0.88, 0.75, 0.42) if str(items[i]) == selected_item else Color(0.31, 0.43, 0.40), false, 2.0 if str(items[i]) == selected_item else 1.0)
 			draw_string(ThemeDB.fallback_font, item_rect.position + Vector2(10.0, 24.0), str(items[i]), HORIZONTAL_ALIGNMENT_LEFT, col_width - 70.0, 13, Color(0.91, 0.93, 0.85))
 			draw_string(ThemeDB.fallback_font, item_rect.position + Vector2(item_rect.size.x - 38.0, 24.0), "x%d" % int(inventory[items[i]]), HORIZONTAL_ALIGNMENT_RIGHT, 30.0, 14, Color(0.98, 0.80, 0.43))
 	else:
