@@ -882,21 +882,25 @@ func _draw_world(size: Vector2) -> void:
 					_draw_pine(px, ground_screen_y)
 				else:
 					_draw_tree(px, ground_screen_y)
-			else:
+			elif ground_screen_y >= -12.0 and ground_screen_y <= size.y + 12.0:
+				# Small plants are only drawn when their short silhouettes can reach the viewport.
 				_draw_ground_flora(px, ground_screen_y, biome, tx, flora_seed_offset)
-			var object_key: String = str(tx)
-			if placed_objects.has(object_key):
-				var object_kind: String = str(placed_objects[object_key])
-				if object_kind == "Torch":
-					draw_circle(Vector2(px + 12, ground_screen_y - 24), 25.0, TORCH_GLOW_COLOR)
-					draw_rect(Rect2(px + 10, ground_screen_y - 25, 4, 25), TORCH_WOOD_COLOR)
-					draw_rect(Rect2(px + 9, ground_screen_y - 30, 6, 8), TORCH_FLAME_COLOR)
-					draw_rect(Rect2(px + 11, ground_screen_y - 34, 3, 5), TORCH_CORE_COLOR)
-				elif object_kind == "Campfire":
-					draw_rect(Rect2(px + 2, ground_screen_y - 5, 20, 5), CAMPFIRE_LOG_DARK_COLOR)
-					draw_rect(Rect2(px + 4, ground_screen_y - 10, 16, 4), CAMPFIRE_LOG_LIGHT_COLOR)
-					draw_colored_polygon(PackedVector2Array([Vector2(px + 7, ground_screen_y - 8), Vector2(px + 12, ground_screen_y - 24), Vector2(px + 18, ground_screen_y - 8)]), CAMPFIRE_FLAME_COLOR)
-					draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), CAMPFIRE_CORE_COLOR)
+			# Placed lights and campfires extend at most 34 px above the surface.
+			# Skip their draw calls when that entire footprint is outside the screen.
+			if ground_screen_y >= -36.0 and ground_screen_y <= size.y + 36.0:
+				var object_key: String = str(tx)
+				if placed_objects.has(object_key):
+					var object_kind: String = str(placed_objects[object_key])
+					if object_kind == "Torch":
+						draw_circle(Vector2(px + 12, ground_screen_y - 24), 25.0, TORCH_GLOW_COLOR)
+						draw_rect(Rect2(px + 10, ground_screen_y - 25, 4, 25), TORCH_WOOD_COLOR)
+						draw_rect(Rect2(px + 9, ground_screen_y - 30, 6, 8), TORCH_FLAME_COLOR)
+						draw_rect(Rect2(px + 11, ground_screen_y - 34, 3, 5), TORCH_CORE_COLOR)
+					elif object_kind == "Campfire":
+						draw_rect(Rect2(px + 2, ground_screen_y - 5, 20, 5), CAMPFIRE_LOG_DARK_COLOR)
+						draw_rect(Rect2(px + 4, ground_screen_y - 10, 16, 4), CAMPFIRE_LOG_LIGHT_COLOR)
+						draw_colored_polygon(PackedVector2Array([Vector2(px + 7, ground_screen_y - 8), Vector2(px + 12, ground_screen_y - 24), Vector2(px + 18, ground_screen_y - 8)]), CAMPFIRE_FLAME_COLOR)
+						draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), CAMPFIRE_CORE_COLOR)
 	
 	# Seed offset is computed once per frame in _draw_world, not per plant.
 func _draw_ground_flora(x: float, y: float, biome: String, tx: int, flora_seed_offset: int) -> void:
