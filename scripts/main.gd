@@ -561,13 +561,36 @@ func _draw() -> void:
 	_draw_controls(size)
 
 func _draw_scenery(size: Vector2, sun: float) -> void:
+	var horizon := size.y * 0.54 - camera_offset.y * 0.04
+	# Subtle atmospheric bands keep the sky from looking like a flat solid color.
+	for band in range(6):
+		var band_color := Color(0.08, 0.13, 0.23).lerp(Color(0.42, 0.72, 0.91), sun)
+		band_color.a = 0.035
+		draw_rect(Rect2(0, float(band) * size.y / 6.0, size.x, size.y / 6.0 + 1.0), band_color)
+	# Two distant parallax layers add depth while keeping the game lightweight.
+	for i in range(9):
+		var x := fposmod(float(i * 210) - camera_offset.x * 0.10, size.x + 300.0) - 150.0
+		var h := 80.0 + float((i * 43) % 95)
+		var y := horizon - h - camera_offset.y * 0.035
+		var far_color := Color(0.20, 0.35, 0.43).lerp(Color(0.52, 0.69, 0.72), sun)
+		draw_colored_polygon(PackedVector2Array([Vector2(x - 135, horizon), Vector2(x, y), Vector2(x + 155, horizon)]), far_color)
 	for i in range(7):
-		var x := fposmod(float(i * 260) - camera_offset.x * 0.18, size.x + 300.0) - 120.0
-		var h := 95.0 + float((i * 37) % 70)
-		var y := size.y * 0.52 - h - camera_offset.y * 0.08
-		var c := Color(0.19, 0.35, 0.39).lerp(Color(0.32, 0.49, 0.47), sun)
-		draw_colored_polygon(PackedVector2Array([Vector2(x - 130, y + h), Vector2(x, y), Vector2(x + 170, y + h)]), c)
-	draw_circle(Vector2(size.x * 0.82, 92), 27.0, Color(1.0, 0.85, 0.53).lerp(Color(0.95, 0.95, 0.83), sun))
+		var x := fposmod(float(i * 275 + 95) - camera_offset.x * 0.19, size.x + 360.0) - 180.0
+		var h := 70.0 + float((i * 37) % 72)
+		var y := horizon + 26.0 - h - camera_offset.y * 0.055
+		var near_color := Color(0.15, 0.29, 0.34).lerp(Color(0.34, 0.51, 0.50), sun)
+		draw_colored_polygon(PackedVector2Array([Vector2(x - 130, horizon + 26.0), Vector2(x, y), Vector2(x + 170, horizon + 26.0)]), near_color)
+	# Soft cloud clusters and a gently glowing sun/moon.
+	for i in range(5):
+		var cx := fposmod(float(i * 287) - camera_offset.x * 0.035 + 80.0, size.x + 240.0) - 120.0
+		var cy := 105.0 + float((i * 29) % 90) - camera_offset.y * 0.015
+		var cloud := Color(0.87, 0.94, 0.97, 0.28 if sun > 0.3 else 0.12)
+		draw_circle(Vector2(cx, cy), 17.0, cloud)
+		draw_circle(Vector2(cx + 20.0, cy - 7.0), 23.0, cloud)
+		draw_circle(Vector2(cx + 43.0, cy + 1.0), 15.0, cloud)
+	var celestial := Color(1.0, 0.79, 0.42).lerp(Color(0.91, 0.94, 1.0), sun)
+	draw_circle(Vector2(size.x * 0.82, 92.0), 31.0, Color(celestial.r, celestial.g, celestial.b, 0.10))
+	draw_circle(Vector2(size.x * 0.82, 92.0), 24.0, celestial)
 
 func _draw_world(size: Vector2) -> void:
 	var start_x := maxi(0, int(floor(camera_offset.x / TILE)) - 2)
@@ -577,10 +600,15 @@ func _draw_world(size: Vector2) -> void:
 		var px := float(tx * TILE) - camera_offset.x
 		for ty in range(maxi(0, int(floor(camera_offset.y / TILE)) - 1), WORLD_DEPTH):
 			var kind := block_type(tx, ty)
-			if kind == "":
-				continue
 			var py := float(ty * TILE) - camera_offset.y
 			if py < -TILE or py > size.y + TILE:
+				continue
+			# Cave voids are dark, not transparent holes showing the sky behind the world.
+			if kind == "":
+				if ty > surface + 5 and ty < WORLD_DEPTH - 4 and _is_cave(tx, ty):
+					draw_rect(Rect2(px, py, TILE, TILE), Color(0.045, 0.055, 0.075))
+					if (tx + ty) % 5 == 0:
+						draw_rect(Rect2(px + 4, py + 5, 3, 2), Color(0.12, 0.15, 0.18))
 				continue
 			var rect := Rect2(px, py, TILE, TILE)
 			var color := Color(0.35, 0.65, 0.29)
@@ -607,10 +635,26 @@ func _draw_world(size: Vector2) -> void:
 				draw_rect(Rect2(px + 14, py + 14, 6, 5), Color(0.78, 0.40, 0.22))
 			if ty > surface and tx % 7 == 0 and ty > surface + 7:
 				color = Color(0.32, 0.44, 0.49) if kind == "stone" else color
-			draw_rect(rect, color)
-			draw_rect(Rect2(px, py, TILE, 2), color.lightened(0.15))
-			if kind == "stone" and (tx * 13 + ty * 7) % 11 == 0:
-				draw_rect(Rect2(px + 6, py + 8, 5, 4), Color(0.71, 0.47, 0.27))
+			# Shaded faces, seams and small surface details break up the block grid.
+			draw_rect(Rect2(px + 1, py + 1, TILE - 2, TILE - 2), color)
+			draw_rect(Rect2(px + 1, py + 1, TILE - 2, 3), color.lightened(0.16))
+			draw_rect(Rect2(px + 1, py + TILE - 3, TILE - 2, 2), color.darkened(0.20))
+			draw_rect(Rect2(px + TILE - 3, py + 3, 2, TILE - 5), color.darkened(0.12))
+			if kind == "grass":
+				draw_rect(Rect2(px + 1, py + 1, TILE - 2, 5), Color(0.28, 0.66, 0.31))
+				if (tx * 7) % 4 == 0:
+					draw_line(Vector2(px + 5, py + 3), Vector2(px + 4, py - 1), Color(0.50, 0.79, 0.34), 2.0)
+					draw_line(Vector2(px + 11, py + 4), Vector2(px + 13, py), Color(0.50, 0.79, 0.34), 2.0)
+			if kind == "dirt" and (tx * 5 + ty * 3) % 7 == 0:
+				draw_rect(Rect2(px + 5, py + 7, 4, 3), Color(0.53, 0.36, 0.24))
+			if kind == "stone":
+				draw_line(Vector2(px + 4, py + 8), Vector2(px + 10, py + 6), color.lightened(0.13), 1.0)
+				if (tx * 13 + ty * 7) % 11 == 0:
+					draw_rect(Rect2(px + 6, py + 13, 5, 3), Color(0.71, 0.47, 0.27))
+			if kind == "copper_ore":
+				draw_rect(Rect2(px + 4, py + 5, 7, 6), Color(0.91, 0.48, 0.24))
+				draw_rect(Rect2(px + 14, py + 14, 6, 5), Color(0.68, 0.30, 0.18))
+				draw_rect(Rect2(px + 6, py + 6, 3, 2), Color(1.0, 0.70, 0.39))
 		var ground_screen_y := float(surface * TILE) - camera_offset.y
 		var biome := biome_at(tx)
 		if _tree_exists(tx) and surface > 0:
@@ -647,30 +691,45 @@ func _draw_pine(x: float, y: float) -> void:
 	draw_colored_polygon(PackedVector2Array([Vector2(x - 6, y - 48), Vector2(x + 13, y - 108), Vector2(x + 31, y - 48)]), Color(0.16, 0.43, 0.38))
 
 func _draw_tree(x: float, y: float) -> void:
-	var trunk := Color(0.31, 0.19, 0.12)
-	draw_rect(Rect2(x + 8, y - 65, 9, 66), trunk)
-	draw_rect(Rect2(x - 8, y - 87, 42, 38), Color(0.12, 0.39, 0.24))
-	draw_rect(Rect2(x - 1, y - 103, 30, 32), Color(0.17, 0.49, 0.27))
-	draw_rect(Rect2(x + 3, y - 94, 9, 8), Color(0.31, 0.62, 0.31))
+	# Layered canopy, brighter leaf patches and a shaded trunk.
+	draw_rect(Rect2(x + 8, y - 65, 10, 66), Color(0.20, 0.13, 0.10))
+	draw_rect(Rect2(x + 10, y - 64, 4, 61), Color(0.42, 0.27, 0.16))
+	draw_rect(Rect2(x - 13, y - 82, 48, 35), Color(0.08, 0.28, 0.18))
+	draw_rect(Rect2(x - 8, y - 91, 39, 33), Color(0.12, 0.39, 0.24))
+	draw_rect(Rect2(x - 2, y - 108, 32, 34), Color(0.18, 0.49, 0.27))
+	draw_rect(Rect2(x + 3, y - 99, 9, 8), Color(0.34, 0.65, 0.34))
+	draw_rect(Rect2(x + 17, y - 86, 7, 6), Color(0.26, 0.57, 0.30))
 
 func _draw_player() -> void:
 	var p := player - camera_offset
-	# Pixel-art explorer: scarf, tunic, boots, hair and tool.
-	draw_rect(Rect2(p.x - 10, p.y - 34, 20, 25), Color(0.20, 0.48, 0.76))
-	draw_rect(Rect2(p.x - 11, p.y - 12, 9, 14), Color(0.26, 0.22, 0.20))
-	draw_rect(Rect2(p.x + 2, p.y - 12, 9, 14), Color(0.26, 0.22, 0.20))
-	draw_rect(Rect2(p.x - 11, p.y - 47, 22, 17), Color(0.87, 0.66, 0.46))
-	draw_rect(Rect2(p.x - 12, p.y - 50, 24, 8), Color(0.27, 0.17, 0.12))
-	draw_rect(Rect2(p.x + facing * 3, p.y - 41, 3, 3), Color(0.13, 0.12, 0.11))
-	draw_rect(Rect2(p.x + facing * 13, p.y - 26, 13 * facing, 4), Color(0.72, 0.75, 0.77))
+	# More readable adventurer silhouette with layered clothes and backpack.
+	draw_rect(Rect2(p.x - 12, p.y - 13, 24, 13), Color(0.10, 0.11, 0.15, 0.28))
+	draw_rect(Rect2(p.x - 13, p.y - 34, 8, 23), Color(0.38, 0.24, 0.17))
+	draw_rect(Rect2(p.x + 5, p.y - 34, 8, 23), Color(0.38, 0.24, 0.17))
+	draw_rect(Rect2(p.x - 11, p.y - 13, 9, 14), Color(0.16, 0.17, 0.20))
+	draw_rect(Rect2(p.x + 2, p.y - 13, 9, 14), Color(0.16, 0.17, 0.20))
+	draw_rect(Rect2(p.x - 12, p.y - 34, 24, 23), Color(0.12, 0.28, 0.42))
+	draw_rect(Rect2(p.x - 9, p.y - 33, 18, 20), Color(0.22, 0.48, 0.70))
+	draw_rect(Rect2(p.x - 14, p.y - 32, 4, 16), Color(0.79, 0.55, 0.36))
+	draw_rect(Rect2(p.x + 10, p.y - 32, 4, 16), Color(0.79, 0.55, 0.36))
+	draw_rect(Rect2(p.x - 11, p.y - 48, 22, 17), Color(0.78, 0.55, 0.38))
+	draw_rect(Rect2(p.x - 12, p.y - 51, 24, 8), Color(0.20, 0.13, 0.10))
+	draw_rect(Rect2(p.x - 11, p.y - 44, 8, 4), Color(0.20, 0.13, 0.10))
+	draw_rect(Rect2(p.x + facing * 4, p.y - 42, 3, 3), Color(0.09, 0.11, 0.13))
+	draw_rect(Rect2(p.x - 4, p.y - 30, 8, 4), Color(0.79, 0.69, 0.42))
+	draw_rect(Rect2(p.x - facing * 14 - 2, p.y - 31, 5, 13), Color(0.48, 0.28, 0.15))
+	draw_rect(Rect2(p.x + facing * 13, p.y - 27, 14 * facing, 4), Color(0.25, 0.20, 0.15))
+	draw_rect(Rect2(p.x + facing * 22, p.y - 32, 3 * facing, 13), Color(0.72, 0.75, 0.78))
 
 func _draw_slimes() -> void:
 	for slime in slimes:
 		var p := slime - camera_offset
-		draw_rect(Rect2(p.x - 15, p.y - 13, 30, 23), Color(0.25, 0.78, 0.46))
-		draw_rect(Rect2(p.x - 10, p.y - 18, 20, 8), Color(0.31, 0.89, 0.55))
-		draw_rect(Rect2(p.x - 7, p.y - 5, 4, 5), Color(0.08, 0.15, 0.12))
-		draw_rect(Rect2(p.x + 4, p.y - 5, 4, 5), Color(0.08, 0.15, 0.12))
+		draw_circle(Vector2(p.x, p.y + 1.0), 20.0, Color(0.10, 0.22, 0.17, 0.22))
+		draw_colored_polygon(PackedVector2Array([Vector2(p.x - 17, p.y + 4), Vector2(p.x - 15, p.y - 9), Vector2(p.x - 7, p.y - 16), Vector2(p.x + 8, p.y - 16), Vector2(p.x + 16, p.y - 7), Vector2(p.x + 18, p.y + 4)]), Color(0.10, 0.48, 0.32))
+		draw_colored_polygon(PackedVector2Array([Vector2(p.x - 14, p.y + 2), Vector2(p.x - 12, p.y - 8), Vector2(p.x - 5, p.y - 13), Vector2(p.x + 7, p.y - 13), Vector2(p.x + 13, p.y - 6), Vector2(p.x + 14, p.y + 2)]), Color(0.24, 0.82, 0.48))
+		draw_rect(Rect2(p.x - 8, p.y - 5, 4, 5), Color(0.05, 0.13, 0.10))
+		draw_rect(Rect2(p.x + 4, p.y - 5, 4, 5), Color(0.05, 0.13, 0.10))
+		draw_rect(Rect2(p.x - 10, p.y - 10, 4, 2), Color(0.70, 1.0, 0.76))
 
 func _draw_hud(size: Vector2) -> void:
 	draw_rect(Rect2(16, 16, 350, 178), Color(0.055, 0.08, 0.10, 0.84))
