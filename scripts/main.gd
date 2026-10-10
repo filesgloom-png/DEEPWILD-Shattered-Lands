@@ -441,6 +441,12 @@ func _attack() -> void:
 				return
 			var hp := slime_health[i] - 1
 			impact_position = slimes[i]
+			# Push the slime away on contact with a successful melee strike.
+			var slime_knockback_direction := 1.0 if slimes[i].x >= player.x else -1.0
+			var pushed_slime := slimes[i]
+			pushed_slime.x = clampf(pushed_slime.x + slime_knockback_direction * 22.0, 24.0, WORLD_WIDTH * TILE - 24.0)
+			pushed_slime.y = _ground_surface_y(int(floor(pushed_slime.x / TILE))) - 12.0
+			slimes[i] = pushed_slime
 			impact_kind = "hit"
 			impact_timer = 0.26
 			if hp > 0:
