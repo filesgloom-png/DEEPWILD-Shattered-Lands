@@ -735,6 +735,15 @@ func _draw_world(size: Vector2) -> void:
 			elif kind == "bedrock":
 				atlas_index = 9
 			draw_texture_rect_region(TERRAIN_ATLAS, Rect2(px, py, TILE, TILE), Rect2(atlas_index * TILE, 0, TILE, TILE))
+			# Crisp biome-tinted surface edging adds tile definition with only two lightweight strokes.
+			if ty == surface:
+				var edge_color := Color(0.57, 0.82, 0.43, 0.72)
+				if kind == "sand":
+					edge_color = Color(0.88, 0.73, 0.45, 0.72)
+				elif kind == "snow":
+					edge_color = Color(0.82, 0.94, 1.0, 0.78)
+				draw_line(Vector2(px, py + 1.0), Vector2(px + TILE, py + 1.0), edge_color, 1.0)
+				draw_line(Vector2(px + 2.0, py + 3.0), Vector2(px + TILE - 2.0, py + 3.0), Color(0.035, 0.06, 0.045, 0.24), 1.0)
 		var ground_screen_y := float(surface * TILE) - camera_offset.y
 		var biome := biome_at(tx)
 		var has_tree := _tree_exists(tx) and surface > 0
