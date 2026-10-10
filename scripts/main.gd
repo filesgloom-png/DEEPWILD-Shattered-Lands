@@ -680,53 +680,6 @@ func _update_joystick_axis() -> void:
 	if absf(travel) < 10.0:
 		move_axis = 0.0
 
-func _handle_action_touch(pos: Vector2) -> void:
-	var size := get_viewport_rect().size
-	var nearest_action := ""
-	var nearest_distance := INF
-	# Three main controls plus all four utility controls (BAG, CRAFT, USE, POINT).
-	# Keep POINT reachable so checkpoint creation is not silently lost.
-	for i in range(7):
-		var center: Vector2
-		var action: String
-		var target_distance: float
-		if i < 3:
-			center = _main_button_center(size, i)
-			action = ["jump", "hit", "mine"][i]
-			var radius: float = [49.0, 53.0, 48.0][i]
-			target_distance = pos.distance_to(center) / radius
-		else:
-			center = _utility_button_center(size, i - 3)
-			action = ["inventory", "craft", "use", "point"][i - 3]
-			var local_pos := pos - center
-			target_distance = Vector2(local_pos.x / 55.0, local_pos.y / 25.0).length()
-		if target_distance <= 1.0 and target_distance < nearest_distance:
-			nearest_action = action
-			nearest_distance = target_distance
-
-	match nearest_action:
-		"jump":
-			_flash_control("jump")
-			jump_requested = true
-		"hit":
-			_flash_control("hit")
-			attack_requested = true
-		"mine":
-			_flash_control("mine")
-			mine_requested = true
-		"inventory":
-			_flash_control("inventory")
-			active_panel = "inventory"
-		"craft":
-			_flash_control("craft")
-			active_panel = "craft"
-		"use":
-			_flash_control("use")
-			_use_selected_item()
-		"point":
-			_flash_control("point")
-			_set_checkpoint()
-
 func _flash_control(action: String) -> void:
 	pressed_action = action
 	pressed_action_timer = 0.16
@@ -1586,10 +1539,10 @@ func _draw_item_wheel() -> void:
 	for i in range(8):
 		var angle := float(i) * TAU / 8.0 - PI * 0.5
 		var p := center + Vector2(cos(angle), sin(angle)) * 76.0
-		var selected := actions[i] == radial_choice or (actions[i] == "item" and inventory.has(radial_choice))
+		var selected: bool = str(actions[i]) == radial_choice or (str(actions[i]) == "item" and inventory.has(radial_choice))
 		draw_circle(p, 25.0, Color(0.16, 0.33, 0.28, 0.96) if selected else Color(0.06, 0.12, 0.13, 0.94))
 		draw_arc(p, 23.0, 0.0, TAU, 24, Color(0.92, 0.76, 0.46, 0.92) if selected else Color(0.44, 0.68, 0.61, 0.78), 1.5, true)
-		var label := labels[i]
+		var label: String = str(labels[i])
 		if actions[i] == "item" and not radial_items.is_empty():
 			label = str(radial_items[clampi(int(floor(float(radial_items.size()) * 0.5)), 0, radial_items.size() - 1)]).substr(0, 5).to_upper()
 		draw_string(ThemeDB.fallback_font, p + Vector2(0, 4), label, HORIZONTAL_ALIGNMENT_CENTER, 46.0, 8, Color(0.94, 0.96, 0.85))
