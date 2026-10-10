@@ -456,6 +456,9 @@ func _attack() -> void:
 			message_timer = 2.0
 			_save_world()
 			return
+	impact_position = player + Vector2(float(facing) * 22.0, -24.0)
+	impact_kind = "swing_right" if facing > 0 else "swing_left"
+	impact_timer = 0.20
 	message = "Swing!"
 	message_timer = 0.7
 
@@ -1074,7 +1077,14 @@ func _draw_effects() -> void:
 	# All impact variants fit inside this generous screen-space bound; skip fully invisible effects.
 	if p.x + 40.0 < 0.0 or p.x - 40.0 > viewport_size.x or p.y + 50.0 < 0.0 or p.y - 50.0 > viewport_size.y:
 		return
-	var strength := clampf(impact_timer / 0.26, 0.0, 1.0)
+	var effect_duration := 0.20 if impact_kind.begins_with("swing_") else 0.26
+	var strength := clampf(impact_timer / effect_duration, 0.0, 1.0)
+	if impact_kind.begins_with("swing_"):
+		var swing_direction := 0.0 if impact_kind == "swing_right" else PI
+		var swing_radius := 19.0 + (1.0 - strength) * 9.0
+		draw_arc(p + Vector2(0.0, 7.0), swing_radius, swing_direction - 0.95, swing_direction + 0.85, 16, Color(1.0, 0.88, 0.57, strength), 4.0, true)
+		draw_line(p + Vector2(cos(swing_direction - 0.85), sin(swing_direction - 0.85)) * 15.0, p + Vector2(cos(swing_direction - 0.85), sin(swing_direction - 0.85)) * 27.0, Color(1.0, 0.97, 0.78, strength), 2.0)
+		return
 	if impact_kind == "damage":
 		var pulse := 1.0 - strength
 		draw_colored_polygon(PackedVector2Array([
