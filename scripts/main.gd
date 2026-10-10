@@ -21,6 +21,9 @@ const GRASS_EDGE_COLOR := Color(0.57, 0.82, 0.43, 0.72)
 const SAND_EDGE_COLOR := Color(0.88, 0.73, 0.45, 0.72)
 const SNOW_EDGE_COLOR := Color(0.82, 0.94, 1.0, 0.78)
 const EDGE_SHADOW_COLOR := Color(0.035, 0.06, 0.045, 0.24)
+const CLOUD_BASE_COLOR := Color(0.87, 0.94, 0.97)
+const CLOUD_HIGHLIGHT_COLOR := Color(0.98, 1.0, 1.0)
+const CLOUD_SHADOW_COLOR := Color(0.24, 0.35, 0.48)
 # Shared flora palette: reuse immutable colors instead of constructing them per visible plant.
 const FLORA_SAND_DARK := Color(0.56, 0.39, 0.22)
 const FLORA_SAND_LIGHT := Color(0.72, 0.53, 0.30)
@@ -728,15 +731,16 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 			draw_circle(Vector2(fly_x, fly_y), 4.0, fly_halo)
 			draw_circle(Vector2(fly_x, fly_y), 1.4, fly_core)
 	# Soft cloud clusters and a gently glowing sun/moon.
-	var cloud_highlight := Color(0.98, 1.0, 1.0, 0.22 if sun > 0.3 else 0.10)
-	var cloud_shadow := Color(0.24, 0.35, 0.48, 0.12 if sun > 0.3 else 0.08)
-	var cloud_base_color := Color(0.87, 0.94, 0.97)
+	var cloud_highlight := CLOUD_HIGHLIGHT_COLOR
+	cloud_highlight.a = 0.22 if sun > 0.3 else 0.10
+	var cloud_shadow := CLOUD_SHADOW_COLOR
+	cloud_shadow.a = 0.12 if sun > 0.3 else 0.08
 	for i in range(5):
 		var cx := fposmod(float(i * 287) - camera_offset.x * 0.035 + 80.0, size.x + 240.0) - 120.0
 		var cy := 105.0 + float((i * 29) % 90) - camera_offset.y * 0.015 + float((i % 3) - 1) * 5.0
 		# Small deterministic opacity differences make the cloud layer feel less repeated.
 		var cloud_alpha := (0.25 + float(i % 3) * 0.025) if sun > 0.3 else (0.10 + float(i % 3) * 0.01)
-		var cloud := cloud_base_color
+		var cloud := CLOUD_BASE_COLOR
 		cloud.a = cloud_alpha
 		draw_circle(Vector2(cx, cy), 17.0, cloud)
 		draw_circle(Vector2(cx + 20.0, cy - 7.0), 23.0, cloud)
