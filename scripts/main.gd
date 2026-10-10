@@ -661,6 +661,13 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		var y := horizon + 26.0 - h - camera_offset.y * 0.055
 		var near_color := Color(0.15, 0.29, 0.34).lerp(Color(0.34, 0.51, 0.50), sun)
 		draw_colored_polygon(PackedVector2Array([Vector2(x - 130, horizon + 26.0), Vector2(x, y), Vector2(x + 170, horizon + 26.0)]), near_color)
+	# A faint horizon glow adds depth at dawn and dusk without extra scene nodes.
+	var horizon_glow := clampf(1.0 - absf(sun - 0.5) * 3.2, 0.0, 1.0)
+	if horizon_glow > 0.0:
+		var glow_color := Color(1.0, 0.49, 0.28, horizon_glow * 0.10)
+		draw_rect(Rect2(0.0, horizon - 34.0, size.x, 68.0), glow_color)
+		var glow_line := Color(1.0, 0.68, 0.43, horizon_glow * 0.20)
+		draw_line(Vector2(0.0, horizon + 5.0), Vector2(size.x, horizon + 5.0), glow_line, 1.0)
 	# Soft cloud clusters and a gently glowing sun/moon.
 	for i in range(5):
 		var cx := fposmod(float(i * 287) - camera_offset.x * 0.035 + 80.0, size.x + 240.0) - 120.0
