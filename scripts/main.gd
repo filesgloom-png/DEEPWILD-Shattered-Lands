@@ -48,6 +48,10 @@ var slime_damage_cooldown := 0.0
 var attack_cooldown := 0.0
 var slime_spawn_timer := 0.0
 var world_save_loaded := false
+# Short-lived cosmetic feedback; these values never affect gameplay or saves.
+var impact_timer := 0.0
+var impact_position := Vector2.ZERO
+var impact_kind := "mine"
 
 func _ready() -> void:
 	randomize()
@@ -62,6 +66,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	slime_damage_cooldown = maxf(0.0, slime_damage_cooldown - delta)
+	impact_timer = maxf(0.0, impact_timer - delta)
 	attack_cooldown = maxf(0.0, attack_cooldown - delta)
 	var next_day_time: float = day_time + delta * 0.018
 	if next_day_time >= TAU:
@@ -137,6 +142,9 @@ func _update_slimes(delta: float) -> void:
 			slime.x += signf(distance) * 42.0 * delta
 		if absf(distance) < 30.0 and absf(player.y - slime.y) < 45.0 and slime_damage_cooldown <= 0.0:
 			health = maxi(0, health - 8)
+			impact_position = player
+			impact_kind = "damage"
+			impact_timer = 0.24
 			slime_damage_cooldown = 1.0
 			message = "Slime hit! -8 HP"
 			message_timer = 1.0
@@ -313,6 +321,9 @@ func _mine_block() -> void:
 			message = drop + " stack full! Block not mined"
 			message_timer = 1.5
 			return
+		impact_position = Vector2(float(cell.x * TILE + TILE / 2), float(cell.y * TILE + TILE / 2))
+		impact_kind = "copper" if kind == "copper_ore" else "mine"
+		impact_timer = 0.22
 		world_blocks[str(cell.x) + ":" + str(cell.y)] = ""
 		generated_tile_cache.erase(str(cell.x) + ":" + str(cell.y))
 		var added := _add_item(drop, 1)
@@ -335,6 +346,9 @@ func _attack() -> void:
 				message = "Wild Essence stack full; slime not defeated"
 				message_timer = 1.8
 				return
+			impact_position = slimes[i]
+			impact_kind = "hit"
+			impact_timer = 0.26
 			slimes.remove_at(i)
 			_add_item("Wild Essence", 1)
 			message = "Slime defeated! +1 Wild Essence"
@@ -573,6 +587,7 @@ func _draw() -> void:
 	_draw_world(size)
 	_draw_player()
 	_draw_slimes()
+	_draw_effects()
 	_draw_hud(size)
 	_draw_controls(size)
 
@@ -627,8 +642,17 @@ func _draw_world(size: Vector2) -> void:
 			if kind == "":
 				if ty > surface + 5 and ty < WORLD_DEPTH - 4:
 					draw_rect(Rect2(px, py, TILE, TILE), Color(0.045, 0.055, 0.075))
-					if (tx + ty) % 5 == 0:
-						draw_rect(Rect2(px + 4, py + 5, 3, 2), Color(0.12, 0.15, 0.18))
+					# Sparse deterministic cave details, evaluated only for visible cells.
+					var cave_mark := posmod(tx * 37 + ty * 19 + int(world_seed % 101), 23)
+					if cave_mark == 0:
+						draw_rect(Rect2(px + 3, py + 4, 7, 2), Color(0.13, 0.16, 0.19))
+						draw_rect(Rect2(px + 5, py + 6, 3, 2), Color(0.085, 0.11, 0.14))
+					elif cave_mark == 7 and ty > surface + 8:
+						var shard_color := Color(0.18, 0.62, 0.58, 0.82)
+						draw_colored_polygon(PackedVector2Array([Vector2(px + 8, py + 18), Vector2(px + 12, py + 5), Vector2(px + 15, py + 18)]), shard_color)
+						draw_line(Vector2(px + 12, py + 8), Vector2(px + 12, py + 17), Color(0.55, 0.94, 0.78, 0.8), 1.0)
+					elif (tx * 11 + ty * 5) % 17 == 0:
+						draw_rect(Rect2(px + 16, py + 3, 3, 2), Color(0.15, 0.18, 0.21))
 				continue
 			# A single atlas blit replaces many per-tile draw calls and provides
 			# hand-authored pixel texture while retaining the original tile grid.
@@ -693,6 +717,36 @@ func _draw_player() -> void:
 	draw_set_transform(p, 0.0, Vector2(float(facing), 1.0))
 	draw_texture_rect_region(HERO_ATLAS, Rect2(-16, -48, 32, 48), Rect2(0, 0, 32, 48))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _draw_effects() -> void:
+	if impact_timer <= 0.0:
+		return
+	var p := impact_position - camera_offset
+	var strength := clampf(impact_timer / 0.26, 0.0, 1.0)
+	if impact_kind == "damage":
+		var pulse := 1.0 - strength
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(p.x - 20, p.y - 36), Vector2(p.x - 11, p.y - 43),
+			Vector2(p.x - 5, p.y - 32), Vector2(p.x + 4, p.y - 45),
+			Vector2(p.x + 9, p.y - 31), Vector2(p.x + 19, p.y - 37),
+			Vector2(p.x + 14, p.y - 18), Vector2(p.x - 14, p.y - 18)
+		]), Color(1.0, 0.22, 0.19, 0.24 + pulse * 0.3))
+		return
+	if impact_kind == "hit":
+		var radius := 13.0 + (1.0 - strength) * 17.0
+		draw_arc(p, radius, -0.9, 1.0, 8, Color(1.0, 0.88, 0.55, strength), 3.0, true)
+		draw_line(p + Vector2(-14, -8), p + Vector2(-6, -15), Color(1.0, 0.96, 0.75, strength), 2.0)
+		draw_line(p + Vector2(9, -12), p + Vector2(16, -5), Color(1.0, 0.96, 0.75, strength), 2.0)
+		return
+	var shard := Color(0.38, 0.91, 0.83, strength) if impact_kind == "copper" else Color(0.87, 0.76, 0.55, strength)
+	var spread := (1.0 - strength) * 10.0
+	for i in range(4):
+		var angle := float(i) * TAU / 4.0 + 0.4
+		var direction := Vector2(cos(angle), sin(angle))
+		var origin := p + direction * spread
+		draw_line(origin, origin + direction * 4.0, shard, 2.0)
+	if impact_kind == "copper":
+		draw_circle(p, 7.0 + (1.0 - strength) * 5.0, Color(0.16, 0.78, 0.69, 0.12 * strength))
 
 func _draw_slimes() -> void:
 	for slime in slimes:
