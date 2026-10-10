@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="120" viewBox="0 0 192 120" shape-rendering="crispEdges">
+<!-- Forest tree sprite -->
+<g transform="translate(0 0)">
+<rect x="20" y="54" width="10" height="64" fill="#4a2d1b"/><rect x="23" y="54" width="4" height="64" fill="#80502b"/><rect x="16" y="88" width="5" height="20" fill="#4a2d1b"/>
+<path d="M2 66L7 42L18 34L15 21L29 8L41 25L39 40L47 52L43 71L34 81L11 79Z" fill="#123d27"/>
+<path d="M5 59L10 40L20 32L18 23L29 13L38 28L35 42L43 53L39 67L31 75L14 73Z" fill="#1c6035"/>
+<path d="M12 48L16 34L23 29L22 24L29 17L34 30L31 39L36 48L31 59L19 61Z" fill="#328746"/>
+<rect x="17" y="38" width="5" height="4" fill="#63b84b"/><rect x="29" y="29" width="4" height="4" fill="#70c654"/><rect x="10" y="54" width="5" height="3" fill="#4da342"/><rect x="31" y="53" width="5" height="3" fill="#55a947"/>
+</g>
+<!-- Pine tree -->
+<g transform="translate(48 0)">
+<rect x="20" y="49" width="9" height="69" fill="#4a3020"/><rect x="23" y="53" width="3" height="63" fill="#80502b"/>
+<path d="M24 2L3 47L14 44L0 70L14 66L5 88L43 88L34 66L47 70L33 44L44 47Z" fill="#123c39"/>
+<path d="M24 9L7 44L17 41L5 65L17 62L10 81L38 81L31 62L42 65L30 41L40 44Z" fill="#1c6252"/>
+<path d="M24 18L13 42L20 39L12 57L21 54L17 70L32 70L28 54L36 57L28 39L35 42Z" fill="#34856a"/>
+<rect x="18" y="38" width="4" height="3" fill="#7acb8c"/><rect x="28" y="52" width="4" height="3" fill="#67b77a"/>
+</g>
+<!-- Cactus -->
+<g transform="translate(96 0)">
+<rect x="18" y="29" width="13" height="88" fill="#14573b"/><rect x="21" y="31" width="6" height="84" fill="#2b8a50"/><rect x="13" y="51" width="8" height="8" fill="#2b8a50"/><rect x="10" y="38" width="8" height="18" fill="#237644"/><rect x="10" y="37" width="5" height="7" fill="#3ba65c"/><rect x="29" y="66" width="9" height="8" fill="#2b8a50"/><rect x="33" y="49" width="8" height="20" fill="#237644"/><rect x="36" y="49" width="5" height="7" fill="#3ba65c"/><path d="M22 39V107 M25 39V107" stroke="#75c66a" stroke-width="2"/><path d="M18 44L15 47 M31 75L34 78 M18 81L15 84" stroke="#a5db79" stroke-width="2"/>
+</g>
+<!-- Slime sprite in fourth cell -->
+<g transform="translate(144 0)">
+<ellipse cx="24" cy="104" rx="20" ry="6" fill="#13251c" opacity=".4"/>
+<path d="M4 102L5 87L10 77L17 71L31 71L39 78L44 91L44 102Z" fill="#11613f"/>
+<path d="M8 99L8 88L13 79L19 75L30 75L37 80L40 91L40 99Z" fill="#35a95d"/>
+<rect x="13" y="80" width="7" height="4" fill="#75e58a"/><rect x="28" y="80" width="6" height="4" fill="#75e58a"/>
+<rect x="15" y="88" width="4" height="7" fill="#102b20"/><rect x="29" y="88" width="4" height="7" fill="#102b20"/>
+<rect x="14" y="87" width="2" height="2" fill="#e6fff0"/><rect x="28" y="87" width="2" height="2" fill="#e6fff0"/>
+<rect x="21" y="96" width="7" height="2" fill="#16653f"/>
+</g>
+</svg>
