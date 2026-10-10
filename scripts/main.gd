@@ -41,6 +41,7 @@ var player_respawn := Vector2(320.0, 240.0)
 var checkpoint_tile := -1
 var campfire_heal_timer := 0.0
 var slime_damage_cooldown := 0.0
+var attack_cooldown := 0.0
 var slime_spawn_timer := 0.0
 var world_save_loaded := false
 
@@ -57,6 +58,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	slime_damage_cooldown = maxf(0.0, slime_damage_cooldown - delta)
+	attack_cooldown = maxf(0.0, attack_cooldown - delta)
 	var next_day_time: float = day_time + delta * 0.018
 	if next_day_time >= TAU:
 		day_count += 1
@@ -307,6 +309,11 @@ func _mine_block() -> void:
 	message_timer = 1.5
 
 func _attack() -> void:
+	if attack_cooldown > 0.0:
+		message = "Recovering..."
+		message_timer = 0.5
+		return
+	attack_cooldown = 0.45
 	for i in range(slimes.size() - 1, -1, -1):
 		if absf(slimes[i].x - (player.x + facing * 28.0)) < 62.0 and absf(slimes[i].y - player.y) < 65.0:
 			if int(inventory.get("Wild Essence", 0)) >= MAX_STACK:
@@ -679,6 +686,8 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 68), "SLIMES %d/3" % slimes.size(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(0.70, 1.0, 0.75))
+	var hit_status := "HIT READY" if attack_cooldown <= 0.0 else "HIT RECOVERY %.1fs" % attack_cooldown
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 86), hit_status, HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, Color(0.96, 0.78, 0.55) if attack_cooldown > 0.0 else Color(0.80, 0.95, 0.80))
 	if message_timer > 0.0:
 		var width := minf(size.x - 40.0, 510.0)
 		draw_rect(Rect2((size.x - width) * 0.5, 34, width, 38), Color(0.05, 0.07, 0.08, 0.82))
@@ -694,7 +703,8 @@ func _draw_controls(size: Vector2) -> void:
 	draw_circle(knob, 23, Color(0.83, 0.89, 0.84, 0.58))
 	var base := size - Vector2(105, 108)
 	_draw_button(base + Vector2(-110, -8), "JUMP", Color(0.28, 0.58, 0.78))
-	_draw_button(base + Vector2(0, -112), "HIT", Color(0.77, 0.35, 0.28))
+	var hit_color := Color(0.77, 0.35, 0.28) if attack_cooldown <= 0.0 else Color(0.38, 0.40, 0.42)
+	_draw_button(base + Vector2(0, -112), "HIT", hit_color)
 	_draw_button(base + Vector2(-112, -112), "MINE", Color(0.68, 0.53, 0.25))
 	_draw_button(Vector2(size.x - 72, 74), "MAKE", Color(0.32, 0.56, 0.39))
 	_draw_button(Vector2(size.x - 72, 158), "NEXT", Color(0.40, 0.48, 0.57))
