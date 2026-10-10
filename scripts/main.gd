@@ -40,6 +40,7 @@ var world_seed := 0
 var player_respawn := Vector2(320.0, 240.0)
 var checkpoint_tile := -1
 var campfire_heal_timer := 0.0
+var slime_damage_cooldown := 0.0
 var world_save_loaded := false
 
 func _ready() -> void:
@@ -54,6 +55,7 @@ func _ready() -> void:
 	set_process(true)
 
 func _process(delta: float) -> void:
+	slime_damage_cooldown = maxf(0.0, slime_damage_cooldown - delta)
 	var next_day_time: float = day_time + delta * 0.018
 	if next_day_time >= TAU:
 		day_count += 1
@@ -112,8 +114,11 @@ func _update_slimes(delta: float) -> void:
 		var distance := player.x - slime.x
 		if absf(distance) < 330.0:
 			slime.x += signf(distance) * 42.0 * delta
-		if absf(distance) < 30.0 and absf(player.y - slime.y) < 45.0:
-			health = maxi(0, health - 1) if randf() < delta * 0.8 else health
+		if absf(distance) < 30.0 and absf(player.y - slime.y) < 45.0 and slime_damage_cooldown <= 0.0:
+			health = maxi(0, health - 8)
+			slime_damage_cooldown = 1.0
+			message = "Slime hit! -8 HP"
+			message_timer = 1.0
 		slime.y = _ground_surface_y(int(floor(slime.x / TILE))) - 12.0
 		slimes[i] = slime
 	if health <= 0:
