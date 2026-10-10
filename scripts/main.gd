@@ -23,7 +23,7 @@ var mine_requested := false
 var attack_requested := false
 const MAX_STACK := 99
 const RECIPES := ["Torch", "Planks", "Campfire"]
-var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Campfire": 0}
+var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Campfire": 0, "Wild Essence": 0}
 var world_blocks: Dictionary = {}
 var harvested_trees: Dictionary = {}
 var tree_health: Dictionary = {}
@@ -106,7 +106,7 @@ func _update_slimes(delta: float) -> void:
 		slimes[i] = slime
 	if health <= 0:
 		health = 100
-		player = Vector2(320, ground_y_at(13) - 38)
+		player = Vector2(320.0, _ground_surface_y(int(floor(320.0 / TILE))))
 		velocity = Vector2.ZERO
 		message = "You recovered at the camp"
 		message_timer = 3.0
@@ -272,8 +272,8 @@ func _attack() -> void:
 	for i in range(slimes.size() - 1, -1, -1):
 		if absf(slimes[i].x - (player.x + facing * 28.0)) < 62.0 and absf(slimes[i].y - player.y) < 65.0:
 			slimes.remove_at(i)
-			inventory["Wood"] = int(inventory["Wood"]) + 1
-			message = "Slime defeated! +1 wild essence"
+			var essence_added := _add_item("Wild Essence", 1)
+			message = "Slime defeated! +%d Wild Essence" % essence_added
 			message_timer = 2.0
 			return
 	message = "Swing!"
@@ -543,14 +543,14 @@ func _draw_slimes() -> void:
 		draw_rect(Rect2(p.x + 4, p.y - 5, 4, 5), Color(0.08, 0.15, 0.12))
 
 func _draw_hud(size: Vector2) -> void:
-	draw_rect(Rect2(16, 16, 350, 142), Color(0.055, 0.08, 0.10, 0.84))
+	draw_rect(Rect2(16, 16, 350, 150), Color(0.055, 0.08, 0.10, 0.84))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 42), "DEEPWILD", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.91, 0.83, 0.57))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 65), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 	draw_rect(Rect2(62, 52, 150, 15), Color(0.28, 0.15, 0.16))
 	draw_rect(Rect2(62, 52, 150.0 * float(health) / 100.0, 15), Color(0.84, 0.25, 0.26))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d STONE %d COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  CAMPFIRE %d" % [inventory["Planks"], inventory["Campfire"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  CAMPFIRE %d  ESSENCE %d" % [inventory["Planks"], inventory["Campfire"], inventory["Wild Essence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY 1  •  " + biome_at(int(player.x / TILE)).to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
 	if message_timer > 0.0:
