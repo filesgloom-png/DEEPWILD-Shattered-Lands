@@ -413,27 +413,49 @@ func _update_joystick_axis() -> void:
 
 func _handle_action_touch(pos: Vector2) -> void:
 	var size := get_viewport_rect().size
-	if pos.distance_to(_main_button_center(size, 0)) < 49.0:
-		_flash_control("jump")
-		jump_requested = true
-	elif pos.distance_to(_main_button_center(size, 1)) < 53.0:
-		_flash_control("hit")
-		attack_requested = true
-	elif pos.distance_to(_main_button_center(size, 2)) < 48.0:
-		_flash_control("mine")
-		mine_requested = true
-	elif pos.distance_to(_utility_button_center(size, 0)) < 43.0:
-		_flash_control("craft")
-		_craft_selected()
-	elif pos.distance_to(_utility_button_center(size, 1)) < 43.0:
-		_flash_control("recipe")
-		_next_recipe()
-	elif pos.distance_to(_utility_button_center(size, 2)) < 43.0:
-		_flash_control("use")
-		_use_selected_item()
-	elif pos.distance_to(_utility_button_center(size, 3)) < 43.0:
-		_flash_control("point")
-		_set_checkpoint()
+	var nearest_action := ""
+	var nearest_distance := INF
+	# Primary hit areas overlap slightly by design; resolve the closest control
+	# so a thumb press activates the button actually nearest to the touch.
+	for i in range(7):
+		var center: Vector2
+		var action: String
+		var hit_radius: float
+		if i < 3:
+			center = _main_button_center(size, i)
+			action = ["jump", "hit", "mine"][i]
+			hit_radius = [49.0, 53.0, 48.0][i]
+		else:
+			center = _utility_button_center(size, i - 3)
+			action = ["craft", "recipe", "use", "point"][i - 3]
+			hit_radius = 48.0
+		var distance := pos.distance_to(center)
+		if distance <= hit_radius and distance < nearest_distance:
+			nearest_action = action
+			nearest_distance = distance
+
+	match nearest_action:
+		"jump":
+			_flash_control("jump")
+			jump_requested = true
+		"hit":
+			_flash_control("hit")
+			attack_requested = true
+		"mine":
+			_flash_control("mine")
+			mine_requested = true
+		"craft":
+			_flash_control("craft")
+			_craft_selected()
+		"recipe":
+			_flash_control("recipe")
+			_next_recipe()
+		"use":
+			_flash_control("use")
+			_use_selected_item()
+		"point":
+			_flash_control("point")
+			_set_checkpoint()
 
 func _flash_control(action: String) -> void:
 	pressed_action = action
