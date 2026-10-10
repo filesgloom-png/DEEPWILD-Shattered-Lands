@@ -713,6 +713,9 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 		for i in range(34):
 			var star_x := fposmod(float(i * 137 + 41) - camera_offset.x * 0.012, size.x)
 			var star_y := float((i * 67 + 23) % maxi(1, int(size.y * 0.42))) + 8.0
+			# Stars are at most 1.6 px wide; skip twinkle math for off-screen rows.
+			if star_y + 1.6 < 0.0 or star_y - 1.6 > size.y:
+				continue
 			var twinkle := 0.45 + 0.55 * ((sin(day_time * 4.0 + float(i) * 2.13) + 1.0) * 0.5)
 			var star_alpha := night_strength * twinkle * 0.78
 			var star_color := star_base_color
