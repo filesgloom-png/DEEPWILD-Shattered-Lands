@@ -865,11 +865,14 @@ func _utility_button_center(size: Vector2, index: int) -> Vector2:
 	return Vector2(size.x - 63.0, size.y * 0.24 + float(index) * step)
 
 func _draw_action_button(center: Vector2, label: String, color: Color, radius: float, kind: String) -> void:
+	var pressed := pressed_action == kind and pressed_action_timer > 0.0
+	var visual_radius := radius - 3.0 if pressed else radius
+	var visual_center := center + Vector2(0.0, 2.0) if pressed else center
 	draw_circle(center + Vector2(0, 4), radius + 4.0, Color(0.0, 0.0, 0.0, 0.32))
-	draw_circle(center, radius + 2.0, Color(0.76, 0.88, 0.82, 0.20))
-	draw_circle(center, radius, Color(0.055, 0.085, 0.09, 0.90))
-	draw_circle(center, radius - 4.0, color.darkened(0.28))
-	draw_arc(center, radius - 5.0, -2.55, -0.55, 18, color.lightened(0.25), 2.0, true)
+	draw_circle(visual_center, visual_radius + 2.0, Color(0.76, 0.88, 0.82, 0.28 if pressed else 0.20))
+	draw_circle(visual_center, visual_radius, Color(0.055, 0.085, 0.09, 0.90))
+	draw_circle(visual_center, visual_radius - 4.0, color.lightened(0.12) if pressed else color.darkened(0.28))
+	draw_arc(visual_center, visual_radius - 5.0, -2.55, -0.55, 18, color.lightened(0.35 if pressed else 0.25), 2.0, true)
 	if kind == "jump":
 		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -17), center + Vector2(-10, -4), center + Vector2(-4, -4), center + Vector2(-4, 7), center + Vector2(4, 7), center + Vector2(4, -4), center + Vector2(10, -4)]), Color(0.93, 0.98, 0.98))
 	elif kind == "hit":
@@ -883,11 +886,13 @@ func _draw_action_button(center: Vector2, label: String, color: Color, radius: f
 	draw_string(ThemeDB.fallback_font, center + Vector2(0, radius - 7.0), label, HORIZONTAL_ALIGNMENT_CENTER, radius * 2.2, 10, Color(0.96, 0.98, 0.94))
 
 func _draw_utility_chip(center: Vector2, label: String, accent: Color) -> void:
+	var pressed := pressed_action == label.to_lower() and pressed_action_timer > 0.0
 	var rect := Rect2(center.x - 49.0, center.y - 16.0, 98.0, 32.0)
+	var visual_rect := rect.grow(-2.0) if pressed else rect
 	draw_rect(rect.grow(2.0), Color(0.0, 0.0, 0.0, 0.25), true, 8.0)
-	draw_rect(rect, Color(0.035, 0.065, 0.07, 0.78), true, 8.0)
-	draw_rect(Rect2(rect.position.x + 4.0, rect.position.y + 5.0, 3.0, rect.size.y - 10.0), accent, true, 2.0)
-	draw_string(ThemeDB.fallback_font, center + Vector2(4.0, 4.0), label, HORIZONTAL_ALIGNMENT_CENTER, 86.0, 11, Color(0.91, 0.95, 0.90))
+	draw_rect(visual_rect, Color(0.09, 0.14, 0.13, 0.94) if pressed else Color(0.035, 0.065, 0.07, 0.78), true, 8.0)
+	draw_rect(Rect2(visual_rect.position.x + 4.0, visual_rect.position.y + 5.0, 3.0, visual_rect.size.y - 10.0), accent.lightened(0.25) if pressed else accent, true, 2.0)
+	draw_string(ThemeDB.fallback_font, center + Vector2(4.0, 4.0), label, HORIZONTAL_ALIGNMENT_CENTER, 86.0, 11, Color(1.0, 1.0, 0.92) if pressed else Color(0.91, 0.95, 0.90))
 
 func _save_world() -> void:
 	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "checkpoint_tile": checkpoint_tile, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
