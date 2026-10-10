@@ -456,8 +456,8 @@ func _craft_selected() -> void:
 	var recipe: String = str(RECIPES[craft_recipe_index])
 	if recipe == "Torch":
 		if int(inventory["Wood"]) >= 2 and int(inventory["Stone"]) >= 1:
-			if int(inventory["Torch"]) >= MAX_STACK:
-				message = "Torch stack full"
+			if int(inventory["Torch"]) + 3 > MAX_STACK:
+				message = "Need space for 3 Torches"
 			else:
 				_remove_item("Wood", 2)
 				_remove_item("Stone", 1)
@@ -467,8 +467,8 @@ func _craft_selected() -> void:
 			message = "Torch: need 2 Wood + 1 Stone"
 	elif recipe == "Planks":
 		if int(inventory["Wood"]) >= 2:
-			if int(inventory["Planks"]) >= MAX_STACK:
-				message = "Planks stack full"
+			if int(inventory["Planks"]) + 4 > MAX_STACK:
+				message = "Need space for 4 Planks"
 			else:
 				_remove_item("Wood", 2)
 				_add_item("Planks", 4)
