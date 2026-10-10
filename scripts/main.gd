@@ -335,7 +335,7 @@ func _next_recipe() -> void:
 	message_timer = 1.4
 
 func _craft_selected() -> void:
-	var recipe := RECIPES[craft_recipe_index]
+	var recipe: String = str(RECIPES[craft_recipe_index])
 	if recipe == "Torch":
 		if int(inventory["Wood"]) >= 2 and int(inventory["Stone"]) >= 1:
 			if int(inventory["Torch"]) >= MAX_STACK:
@@ -529,7 +529,7 @@ func _load_world() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if not file:
 		return
-	var parsed = JSON.parse_string(file.get_as_text())
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return
 	world_seed = int(parsed.get("world_seed", world_seed))
