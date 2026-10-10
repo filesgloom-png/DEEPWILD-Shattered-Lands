@@ -719,12 +719,14 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 	# Soft cloud clusters and a gently glowing sun/moon.
 	var cloud_highlight := Color(0.98, 1.0, 1.0, 0.22 if sun > 0.3 else 0.10)
 	var cloud_shadow := Color(0.24, 0.35, 0.48, 0.12 if sun > 0.3 else 0.08)
+	var cloud_base_color := Color(0.87, 0.94, 0.97)
 	for i in range(5):
 		var cx := fposmod(float(i * 287) - camera_offset.x * 0.035 + 80.0, size.x + 240.0) - 120.0
 		var cy := 105.0 + float((i * 29) % 90) - camera_offset.y * 0.015 + float((i % 3) - 1) * 5.0
 		# Small deterministic opacity differences make the cloud layer feel less repeated.
 		var cloud_alpha := (0.25 + float(i % 3) * 0.025) if sun > 0.3 else (0.10 + float(i % 3) * 0.01)
-		var cloud := Color(0.87, 0.94, 0.97, cloud_alpha)
+		var cloud := cloud_base_color
+		cloud.a = cloud_alpha
 		draw_circle(Vector2(cx, cy), 17.0, cloud)
 		draw_circle(Vector2(cx + 20.0, cy - 7.0), 23.0, cloud)
 		draw_circle(Vector2(cx + 43.0, cy + 1.0), 15.0, cloud)
