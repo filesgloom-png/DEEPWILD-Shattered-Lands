@@ -92,8 +92,8 @@ var jump_requested := false
 var mine_requested := false
 var attack_requested := false
 const MAX_STACK := 99
-const RECIPES := ["Torch", "Planks", "Stone Block", "Campfire", "Healing Salve"]
-var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Stone Block": 0, "Campfire": 0, "Wild Essence": 0, "Healing Salve": 0}
+const RECIPES := ["Torch", "Planks", "Stone Block", "Stone Pickaxe", "Campfire", "Healing Salve"]
+var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Stone Block": 0, "Stone Pickaxe": 0, "Campfire": 0, "Wild Essence": 0, "Healing Salve": 0}
 var world_blocks: Dictionary = {}
 var generated_tile_cache: Dictionary = {}
 var harvested_trees: Dictionary = {}
@@ -392,7 +392,8 @@ func _mine_block() -> void:
 		elif kind == "stone" and str(world_blocks.get(str(cell.x) + ":" + str(cell.y), "")) == "stone":
 			# Return crafted building material when the player dismantles their own block.
 			drop = "Stone Block"
-		if int(inventory.get(drop, 0)) >= MAX_STACK:
+		var drop_amount := 2 if int(inventory.get("Stone Pickaxe", 0)) > 0 and (drop == "Stone" or drop == "Copper") else 1
+		if int(inventory.get(drop, 0)) + drop_amount > MAX_STACK:
 			message = drop + " stack full! Block not mined"
 			message_timer = 1.5
 			return
@@ -401,7 +402,7 @@ func _mine_block() -> void:
 		impact_timer = 0.22
 		world_blocks[str(cell.x) + ":" + str(cell.y)] = ""
 		generated_tile_cache.erase(str(cell.x) + ":" + str(cell.y))
-		var added := _add_item(drop, 1)
+		var added := _add_item(drop, drop_amount)
 		message = "+%d %s" % [added, drop]
 		message_timer = 1.2
 		_save_world()
@@ -691,6 +692,16 @@ func _craft_selected() -> void:
 				message = "Crafted 2 Stone Blocks"
 		else:
 			message = "Stone Block: need 3 Stone"
+	elif recipe == "Stone Pickaxe":
+		if int(inventory["Stone Pickaxe"]) > 0:
+			message = "You already have a Stone Pickaxe"
+		elif int(inventory["Wood"]) >= 3 and int(inventory["Stone"]) >= 4:
+			_remove_item("Wood", 3)
+			_remove_item("Stone", 4)
+			_add_item("Stone Pickaxe", 1)
+			message = "Stone Pickaxe crafted: stone and copper yield doubled"
+		else:
+			message = "Stone Pickaxe: need 3 Wood + 4 Stone"
 	elif recipe == "Campfire":
 		if int(inventory["Wood"]) >= 4 and int(inventory["Stone"]) >= 3:
 			if int(inventory["Campfire"]) >= MAX_STACK:
@@ -1084,7 +1095,7 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d STONE %d COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  STONE BLK %d" % [inventory["Planks"], inventory["Stone Block"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 145), "CAMPFIRE %d  ESSENCE %d  SALVE %d" % [inventory["Campfire"], inventory["Wild Essence"], inventory["Healing Salve"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 145), "PICKAXE %d  CAMPFIRE %d  ESSENCE %d  SALVE %d" % [inventory["Stone Pickaxe"], inventory["Campfire"], inventory["Wild Essence"], inventory["Healing Salve"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 165), "Campfires restore 5 HP every 3 seconds nearby", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.75, 0.42))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
