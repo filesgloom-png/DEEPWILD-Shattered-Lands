@@ -1,6 +1,7 @@
 extends Node2D
 
 const TILE := 24
+const TERRAIN_ATLAS: Texture2D = preload("res://assets/terrain_atlas.svg")
 const WORLD_WIDTH := 240
 const WORLD_DEPTH := 46
 const GRAVITY := 1150.0
@@ -627,51 +628,30 @@ func _draw_world(size: Vector2) -> void:
 					if (tx + ty) % 5 == 0:
 						draw_rect(Rect2(px + 4, py + 5, 3, 2), Color(0.12, 0.15, 0.18))
 				continue
-			var rect := Rect2(px, py, TILE, TILE)
-			var color := Color(0.35, 0.65, 0.29)
-			if kind == "dirt":
-				color = Color(0.43, 0.28, 0.19)
-			elif kind == "sand":
-				color = Color(0.83, 0.72, 0.43)
-			elif kind == "sandstone":
-				color = Color(0.63, 0.49, 0.29)
-			elif kind == "snow":
-				color = Color(0.83, 0.90, 0.94)
-			elif kind == "permafrost":
-				color = Color(0.49, 0.63, 0.68)
-			elif kind == "copper_ore":
-				color = Color(0.43, 0.36, 0.34)
-			elif kind == "planks":
-				color = Color(0.63, 0.39, 0.20)
-			elif kind == "stone":
-				color = Color(0.35, 0.37, 0.40)
-			elif kind == "bedrock":
-				color = Color(0.16, 0.18, 0.22)
-			if kind == "copper_ore":
-				draw_rect(Rect2(px + 4, py + 5, 7, 6), Color(0.78, 0.40, 0.22))
-				draw_rect(Rect2(px + 14, py + 14, 6, 5), Color(0.78, 0.40, 0.22))
-			if ty > surface and tx % 7 == 0 and ty > surface + 7:
-				color = Color(0.32, 0.44, 0.49) if kind == "stone" else color
-			# Shaded faces, seams and small surface details break up the block grid.
-			draw_rect(Rect2(px + 1, py + 1, TILE - 2, TILE - 2), color)
-			draw_rect(Rect2(px + 1, py + 1, TILE - 2, 3), color.lightened(0.16))
-			draw_rect(Rect2(px + 1, py + TILE - 3, TILE - 2, 2), color.darkened(0.20))
-			draw_rect(Rect2(px + TILE - 3, py + 3, 2, TILE - 5), color.darkened(0.12))
+			# A single atlas blit replaces many per-tile draw calls and provides
+			# hand-authored pixel texture while retaining the original tile grid.
+			var atlas_index := 4
 			if kind == "grass":
-				draw_rect(Rect2(px + 1, py + 1, TILE - 2, 5), Color(0.28, 0.66, 0.31))
-				if (tx * 7) % 4 == 0:
-					draw_line(Vector2(px + 5, py + 3), Vector2(px + 4, py - 1), Color(0.50, 0.79, 0.34), 2.0)
-					draw_line(Vector2(px + 11, py + 4), Vector2(px + 13, py), Color(0.50, 0.79, 0.34), 2.0)
-			if kind == "dirt" and (tx * 5 + ty * 3) % 7 == 0:
-				draw_rect(Rect2(px + 5, py + 7, 4, 3), Color(0.53, 0.36, 0.24))
-			if kind == "stone":
-				draw_line(Vector2(px + 4, py + 8), Vector2(px + 10, py + 6), color.lightened(0.13), 1.0)
-				if (tx * 13 + ty * 7) % 11 == 0:
-					draw_rect(Rect2(px + 6, py + 13, 5, 3), Color(0.71, 0.47, 0.27))
-			if kind == "copper_ore":
-				draw_rect(Rect2(px + 4, py + 5, 7, 6), Color(0.91, 0.48, 0.24))
-				draw_rect(Rect2(px + 14, py + 14, 6, 5), Color(0.68, 0.30, 0.18))
-				draw_rect(Rect2(px + 6, py + 6, 3, 2), Color(1.0, 0.70, 0.39))
+				atlas_index = 0
+			elif kind == "dirt":
+				atlas_index = 1
+			elif kind == "sand":
+				atlas_index = 2
+			elif kind == "snow":
+				atlas_index = 3
+			elif kind == "stone":
+				atlas_index = 4
+			elif kind == "copper_ore":
+				atlas_index = 5
+			elif kind == "sandstone":
+				atlas_index = 6
+			elif kind == "permafrost":
+				atlas_index = 7
+			elif kind == "planks":
+				atlas_index = 8
+			elif kind == "bedrock":
+				atlas_index = 9
+			draw_texture_rect_region(TERRAIN_ATLAS, Rect2(px, py, TILE, TILE), Rect2(atlas_index * TILE, 0, TILE, TILE))
 		var ground_screen_y := float(surface * TILE) - camera_offset.y
 		var biome := biome_at(tx)
 		if _tree_exists(tx) and surface > 0:
