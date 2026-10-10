@@ -680,13 +680,16 @@ func _draw_world(size: Vector2) -> void:
 			draw_texture_rect_region(TERRAIN_ATLAS, Rect2(px, py, TILE, TILE), Rect2(atlas_index * TILE, 0, TILE, TILE))
 		var ground_screen_y := float(surface * TILE) - camera_offset.y
 		var biome := biome_at(tx)
-		if _tree_exists(tx) and surface > 0:
+		var has_tree := _tree_exists(tx) and surface > 0
+		if has_tree:
 			if biome == "desert":
 				_draw_cactus(px, ground_screen_y)
 			elif biome == "snow":
 				_draw_pine(px, ground_screen_y)
 			else:
 				_draw_tree(px, ground_screen_y)
+		else:
+			_draw_ground_flora(px, ground_screen_y, biome, tx)
 		var object_key: String = str(tx)
 		if placed_objects.has(object_key):
 			var object_kind: String = str(placed_objects[object_key])
@@ -700,6 +703,41 @@ func _draw_world(size: Vector2) -> void:
 				draw_rect(Rect2(px + 4, ground_screen_y - 10, 16, 4), Color(0.45, 0.27, 0.15))
 				draw_colored_polygon(PackedVector2Array([Vector2(px + 7, ground_screen_y - 8), Vector2(px + 12, ground_screen_y - 24), Vector2(px + 18, ground_screen_y - 8)]), Color(1.0, 0.39, 0.10))
 				draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), Color(1.0, 0.78, 0.22))
+
+func _draw_ground_flora(x: float, y: float, biome: String, tx: int) -> void:
+	# Deterministic, sparse surface plants: no nodes or per-frame allocations.
+	var mark := posmod(tx * 17 + int(world_seed % 97), 19)
+	if biome == "desert":
+		if mark == 2 or mark == 11:
+			draw_rect(Rect2(x + 5, y - 4, 5, 3), Color(0.56, 0.39, 0.22))
+			draw_rect(Rect2(x + 8, y - 6, 3, 2), Color(0.72, 0.53, 0.30))
+		elif mark == 6:
+			draw_line(Vector2(x + 12, y - 2), Vector2(x + 9, y - 9), Color(0.52, 0.56, 0.27), 2.0)
+			draw_line(Vector2(x + 12, y - 3), Vector2(x + 16, y - 8), Color(0.62, 0.62, 0.31), 2.0)
+		return
+	if biome == "snow":
+		if mark == 1 or mark == 9:
+			draw_line(Vector2(x + 8, y - 2), Vector2(x + 6, y - 8), Color(0.42, 0.68, 0.70), 2.0)
+			draw_line(Vector2(x + 12, y - 2), Vector2(x + 15, y - 7), Color(0.56, 0.79, 0.78), 2.0)
+			draw_rect(Rect2(x + 7, y - 4, 7, 2), Color(0.36, 0.61, 0.65))
+		return
+	if biome == "forest":
+		if mark % 5 == 0:
+			draw_line(Vector2(x + 7, y - 2), Vector2(x + 5, y - 8), Color(0.20, 0.49, 0.28), 2.0)
+			draw_line(Vector2(x + 11, y - 2), Vector2(x + 13, y - 10), Color(0.29, 0.62, 0.32), 2.0)
+			draw_line(Vector2(x + 15, y - 2), Vector2(x + 18, y - 7), Color(0.22, 0.53, 0.27), 2.0)
+		elif mark == 3:
+			draw_line(Vector2(x + 12, y - 2), Vector2(x + 12, y - 9), Color(0.27, 0.48, 0.25), 1.5)
+			draw_circle(Vector2(x + 12, y - 10), 2.5, Color(0.88, 0.65, 0.75))
+			draw_circle(Vector2(x + 12, y - 10), 1.0, Color(0.96, 0.84, 0.50))
+	else:
+		if mark % 4 == 0:
+			draw_line(Vector2(x + 6, y - 2), Vector2(x + 4, y - 7), Color(0.30, 0.58, 0.31), 2.0)
+			draw_line(Vector2(x + 11, y - 2), Vector2(x + 13, y - 9), Color(0.38, 0.66, 0.34), 2.0)
+		elif mark == 2:
+			draw_line(Vector2(x + 12, y - 2), Vector2(x + 12, y - 8), Color(0.34, 0.57, 0.29), 1.5)
+			draw_circle(Vector2(x + 12, y - 9), 2.5, Color(0.92, 0.74, 0.42))
+			draw_circle(Vector2(x + 12, y - 9), 1.0, Color(0.98, 0.91, 0.64))
 
 func _draw_cactus(x: float, y: float) -> void:
 	draw_texture_rect_region(CREATURE_ATLAS, Rect2(x - 1, y - 120, 48, 120), Rect2(96, 0, 48, 120))
