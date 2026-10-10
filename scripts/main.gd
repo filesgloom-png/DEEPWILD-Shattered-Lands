@@ -392,7 +392,10 @@ func _use_selected_item() -> void:
 			message = "There is already an object here"
 			message_timer = 1.5
 			return
-		_remove_item(recipe, 1)
+		if not _remove_item(recipe, 1):
+			message = "Could not use " + recipe
+			message_timer = 1.5
+			return
 		placed_objects[object_key] = recipe
 		message = recipe + " placed"
 		message_timer = 1.5
@@ -405,7 +408,10 @@ func _use_selected_item() -> void:
 			message = "Health is already full"
 			message_timer = 1.5
 			return
-		_remove_item("Healing Salve", 1)
+		if not _remove_item("Healing Salve", 1):
+			message = "No Healing Salve available"
+			message_timer = 1.5
+			return
 		var old_health: int = health
 		health = mini(100, health + 35)
 		message = "Healing Salve: +%d HP" % (health - old_health)
@@ -420,7 +426,10 @@ func _use_selected_item() -> void:
 			message = "Target block is occupied"
 			message_timer = 1.5
 			return
-		_remove_item("Planks", 1)
+		if not _remove_item("Planks", 1):
+			message = "No Planks available"
+			message_timer = 1.5
+			return
 		world_blocks[block_key] = "planks"
 		message = "Plank placed"
 		message_timer = 1.5
