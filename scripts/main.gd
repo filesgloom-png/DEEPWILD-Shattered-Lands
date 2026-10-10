@@ -52,6 +52,8 @@ var world_save_loaded := false
 var impact_timer := 0.0
 var impact_position := Vector2.ZERO
 var impact_kind := "mine"
+var pressed_action := ""
+var pressed_action_timer := 0.0
 
 func _ready() -> void:
 	randomize()
@@ -67,6 +69,9 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	slime_damage_cooldown = maxf(0.0, slime_damage_cooldown - delta)
 	impact_timer = maxf(0.0, impact_timer - delta)
+	pressed_action_timer = maxf(0.0, pressed_action_timer - delta)
+	if pressed_action_timer <= 0.0:
+		pressed_action = ""
 	attack_cooldown = maxf(0.0, attack_cooldown - delta)
 	var next_day_time: float = day_time + delta * 0.018
 	if next_day_time >= TAU:
@@ -409,19 +414,31 @@ func _update_joystick_axis() -> void:
 func _handle_action_touch(pos: Vector2) -> void:
 	var size := get_viewport_rect().size
 	if pos.distance_to(_main_button_center(size, 0)) < 49.0:
+		_flash_control("jump")
 		jump_requested = true
 	elif pos.distance_to(_main_button_center(size, 1)) < 53.0:
+		_flash_control("hit")
 		attack_requested = true
 	elif pos.distance_to(_main_button_center(size, 2)) < 48.0:
+		_flash_control("mine")
 		mine_requested = true
 	elif pos.distance_to(_utility_button_center(size, 0)) < 43.0:
+		_flash_control("craft")
 		_craft_selected()
 	elif pos.distance_to(_utility_button_center(size, 1)) < 43.0:
+		_flash_control("recipe")
 		_next_recipe()
 	elif pos.distance_to(_utility_button_center(size, 2)) < 43.0:
+		_flash_control("use")
 		_use_selected_item()
 	elif pos.distance_to(_utility_button_center(size, 3)) < 43.0:
+		_flash_control("point")
 		_set_checkpoint()
+
+func _flash_control(action: String) -> void:
+	pressed_action = action
+	pressed_action_timer = 0.16
+	queue_redraw()
 
 func _next_recipe() -> void:
 	craft_recipe_index = (craft_recipe_index + 1) % RECIPES.size()
