@@ -81,9 +81,17 @@ jobs:
           fi
           echo "Using sdkmanager: $SDKMANAGER"
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
+          # The base image ships a broken platform-tools-2 package location. Remove both
+          # copies so sdkmanager installs adb into the path Godot expects.
+          rm -rf "$ANDROID_HOME/platform-tools" "$ANDROID_HOME/platform-tools-2"
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          if [ ! -x "$ANDROID_HOME/platform-tools/adb" ] && [ -x "$ANDROID_HOME/platform-tools-2/adb" ]; then
+            mv "$ANDROID_HOME/platform-tools-2" "$ANDROID_HOME/platform-tools"
+          fi
+          test -x "$ANDROID_HOME/platform-tools/adb"
           test -d "$ANDROID_HOME/platforms/android-35"
           test -d "$ANDROID_HOME/build-tools/35.0.0"
+          ls -la "$ANDROID_HOME/platform-tools"
           ls -la "$ANDROID_HOME/platforms"
           ls -la "$ANDROID_HOME/build-tools"
 
@@ -107,9 +115,13 @@ jobs:
         run: godot --headless --editor --path . --quit
 
       - name: Export Android ARM64 APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /github/home/.android/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p build
-          godot --headless --path . --export-debug "Android" build/DEEPWILD-Shattered-Lands.apk
+          godot --headless --verbose --path . --export-debug "Android" build/DEEPWILD-Shattered-Lands.apk
 
       - name: Verify APK
         run: |
