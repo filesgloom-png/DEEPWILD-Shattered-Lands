@@ -362,9 +362,9 @@ func _input(event: InputEvent) -> void:
 	var size := get_viewport_rect().size
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			if event.position.x < size.x * 0.48 and joystick_id == -1:
+			if event.position.x < size.x * 0.46 and joystick_id == -1:
 				joystick_id = event.index
-				joystick_origin = event.position
+				joystick_origin = _joystick_center(size)
 				joystick_current = event.position
 				_update_joystick_axis()
 			else:
@@ -378,9 +378,9 @@ func _input(event: InputEvent) -> void:
 		_update_joystick_axis()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
-			if event.position.x < size.x * 0.48:
+			if event.position.x < size.x * 0.46:
 				mouse_joystick = true
-				joystick_origin = event.position
+				joystick_origin = _joystick_center(size)
 				joystick_current = event.position
 				_update_joystick_axis()
 			else:
@@ -400,27 +400,28 @@ func _input(event: InputEvent) -> void:
 			jump_requested = true
 
 func _update_joystick_axis() -> void:
-	var delta := joystick_current.x - joystick_origin.x
-	move_axis = clampf(delta / 62.0, -1.0, 1.0)
-	if absf(delta) < 10.0:
+	var size := get_viewport_rect().size
+	var delta := joystick_current.x - _joystick_center(size).x
+	var travel := clampf(delta, -44.0, 44.0)
+	move_axis = travel / 44.0
+	if absf(travel) < 9.0:
 		move_axis = 0.0
 
 func _handle_action_touch(pos: Vector2) -> void:
 	var size := get_viewport_rect().size
-	var base := size - Vector2(105, 108)
-	if pos.distance_to(base + Vector2(-110, -8)) < 54.0:
+	if pos.distance_to(_main_button_center(size, 0)) < 49.0:
 		jump_requested = true
-	elif pos.distance_to(base + Vector2(0, -112)) < 54.0:
+	elif pos.distance_to(_main_button_center(size, 1)) < 53.0:
 		attack_requested = true
-	elif pos.distance_to(base + Vector2(-112, -112)) < 54.0:
+	elif pos.distance_to(_main_button_center(size, 2)) < 48.0:
 		mine_requested = true
-	elif pos.distance_to(_right_button_center(size, 0)) < 38.0:
+	elif pos.distance_to(_utility_button_center(size, 0)) < 43.0:
 		_craft_selected()
-	elif pos.distance_to(_right_button_center(size, 1)) < 38.0:
+	elif pos.distance_to(_utility_button_center(size, 1)) < 43.0:
 		_next_recipe()
-	elif pos.distance_to(_right_button_center(size, 2)) < 38.0:
+	elif pos.distance_to(_utility_button_center(size, 2)) < 43.0:
 		_use_selected_item()
-	elif pos.distance_to(_right_button_center(size, 3)) < 38.0:
+	elif pos.distance_to(_utility_button_center(size, 3)) < 43.0:
 		_set_checkpoint()
 
 func _next_recipe() -> void:
@@ -813,33 +814,73 @@ func _draw_hud(size: Vector2) -> void:
 		draw_string(ThemeDB.fallback_font, Vector2(size.x * 0.5, 59), message, HORIZONTAL_ALIGNMENT_CENTER, width - 16, 16, Color(1.0, 0.91, 0.69))
 
 func _draw_controls(size: Vector2) -> void:
-	var center := Vector2(100, size.y - 112)
-	draw_circle(center, 62, Color(0.04, 0.07, 0.08, 0.36))
-	draw_circle(center, 34, Color(0.68, 0.76, 0.76, 0.18))
-	var knob := center
-	if joystick_id != -1 or mouse_joystick:
-		knob = center + Vector2(clampf(move_axis, -1.0, 1.0) * 27.0, 0)
-	draw_circle(knob, 23, Color(0.83, 0.89, 0.84, 0.58))
-	var base := size - Vector2(105, 108)
-	_draw_button(base + Vector2(-110, -8), "JUMP", Color(0.28, 0.58, 0.78))
-	var hit_color := Color(0.77, 0.35, 0.28) if attack_cooldown <= 0.0 else Color(0.38, 0.40, 0.42)
-	_draw_button(base + Vector2(0, -112), "HIT", hit_color)
-	_draw_button(base + Vector2(-112, -112), "MINE", Color(0.68, 0.53, 0.25))
-	var button_radius := clampf(size.y * 0.065, 25.0, 34.0)
-	_draw_button(_right_button_center(size, 0), "MAKE", Color(0.32, 0.56, 0.39), button_radius)
-	_draw_button(_right_button_center(size, 1), "NEXT", Color(0.40, 0.48, 0.57), button_radius)
-	_draw_button(_right_button_center(size, 2), "USE", Color(0.68, 0.46, 0.25), button_radius)
-	_draw_button(_right_button_center(size, 3), "CAMP", Color(0.43, 0.58, 0.35), button_radius)
+	# Left thumbstick: restrained dark glass with a clear movement direction.
+	var center := _joystick_center(size)
+	draw_circle(center, 57.0, Color(0.025, 0.045, 0.055, 0.48))
+	draw_arc(center, 51.0, 0.0, TAU, 48, Color(0.55, 0.72, 0.72, 0.38), 2.0, true)
+	draw_circle(center, 35.0, Color(0.16, 0.24, 0.26, 0.72))
+	draw_arc(center, 34.0, 0.0, TAU, 36, Color(0.69, 0.80, 0.76, 0.34), 1.5, true)
+	for tick in range(8):
+		var angle := float(tick) * TAU / 8.0
+		var inner := center + Vector2(cos(angle), sin(angle)) * 43.0
+		var outer := center + Vector2(cos(angle), sin(angle)) * 48.0
+		draw_line(inner, outer, Color(0.72, 0.84, 0.79, 0.45), 2.0)
+	var knob := center + Vector2(clampf(move_axis, -1.0, 1.0) * 25.0, 0.0)
+	draw_circle(knob + Vector2(0, 3), 22.0, Color(0.0, 0.0, 0.0, 0.25))
+	draw_circle(knob, 21.0, Color(0.66, 0.83, 0.77, 0.88))
+	draw_arc(knob, 16.0, 3.4, 6.0, 20, Color(0.93, 1.0, 0.92, 0.58), 1.5, true)
 
-func _right_button_center(size: Vector2, index: int) -> Vector2:
-	var step_y := clampf((size.y - 116.0) / 3.0, 48.0, 76.0)
-	return Vector2(size.x - 54.0, 58.0 + float(index) * step_y)
+	# Three primary actions form one compact cluster, with different silhouettes.
+	_draw_action_button(_main_button_center(size, 0), "JUMP", Color(0.22, 0.56, 0.78), 39.0, "jump")
+	var hit_color := Color(0.78, 0.25, 0.23) if attack_cooldown <= 0.0 else Color(0.36, 0.39, 0.40)
+	_draw_action_button(_main_button_center(size, 1), "HIT", hit_color, 44.0, "hit")
+	_draw_action_button(_main_button_center(size, 2), "MINE", Color(0.68, 0.49, 0.23), 36.0, "mine")
 
-func _draw_button(center: Vector2, label: String, color: Color, radius: float = 36.0) -> void:
-	draw_circle(center, radius + 5.0, Color(0.04, 0.06, 0.07, 0.52))
-	draw_circle(center, radius, color.darkened(0.1))
-	draw_circle(center + Vector2(-radius * 0.22, -radius * 0.25), radius * 0.23, Color(1.0, 1.0, 1.0, 0.12))
-	draw_string(ThemeDB.fallback_font, center + Vector2(0, 4), label, HORIZONTAL_ALIGNMENT_CENTER, radius * 2.5, 11, Color.WHITE)
+	# Utility actions are slim glass chips instead of four oversized circles.
+	_draw_utility_chip(_utility_button_center(size, 0), "CRAFT", Color(0.29, 0.62, 0.43))
+	_draw_utility_chip(_utility_button_center(size, 1), "RECIPE", Color(0.42, 0.53, 0.61))
+	_draw_utility_chip(_utility_button_center(size, 2), "USE", Color(0.76, 0.48, 0.25))
+	_draw_utility_chip(_utility_button_center(size, 3), "SAVE", Color(0.40, 0.63, 0.43))
+
+func _joystick_center(size: Vector2) -> Vector2:
+	return Vector2(91.0, size.y - 92.0)
+
+func _main_button_center(size: Vector2, index: int) -> Vector2:
+	var anchor := Vector2(size.x - 92.0, size.y - 91.0)
+	if index == 0:
+		return anchor + Vector2(-65.0, -66.0)
+	if index == 1:
+		return anchor
+	return anchor + Vector2(-76.0, 12.0)
+
+func _utility_button_center(size: Vector2, index: int) -> Vector2:
+	var step := clampf(size.y * 0.115, 39.0, 48.0)
+	return Vector2(size.x - 63.0, size.y * 0.24 + float(index) * step)
+
+func _draw_action_button(center: Vector2, label: String, color: Color, radius: float, kind: String) -> void:
+	draw_circle(center + Vector2(0, 4), radius + 4.0, Color(0.0, 0.0, 0.0, 0.32))
+	draw_circle(center, radius + 2.0, Color(0.76, 0.88, 0.82, 0.20))
+	draw_circle(center, radius, Color(0.055, 0.085, 0.09, 0.90))
+	draw_circle(center, radius - 4.0, color.darkened(0.28))
+	draw_arc(center, radius - 5.0, -2.55, -0.55, 18, color.lightened(0.25), 2.0, true)
+	if kind == "jump":
+		draw_colored_polygon(PackedVector2Array([center + Vector2(0, -17), center + Vector2(-10, -4), center + Vector2(-4, -4), center + Vector2(-4, 7), center + Vector2(4, 7), center + Vector2(4, -4), center + Vector2(10, -4)]), Color(0.93, 0.98, 0.98))
+	elif kind == "hit":
+		draw_line(center + Vector2(-11, -12), center + Vector2(10, 9), Color(1.0, 0.95, 0.83), 5.0)
+		draw_line(center + Vector2(-4, -15), center + Vector2(14, 3), Color(1.0, 0.95, 0.83), 2.0)
+		draw_line(center + Vector2(-15, 8), center + Vector2(-8, 1), Color(1.0, 0.86, 0.63), 2.0)
+	else:
+		draw_rect(Rect2(center.x - 10, center.y - 13, 20, 22), Color(0.94, 0.88, 0.72), false, 2.5)
+		draw_line(center + Vector2(-7, -7), center + Vector2(7, -7), Color(0.94, 0.88, 0.72), 2.0)
+		draw_line(center + Vector2(-7, 0), center + Vector2(4, 0), Color(0.94, 0.88, 0.72), 2.0)
+	draw_string(ThemeDB.fallback_font, center + Vector2(0, radius - 7.0), label, HORIZONTAL_ALIGNMENT_CENTER, radius * 2.2, 10, Color(0.96, 0.98, 0.94))
+
+func _draw_utility_chip(center: Vector2, label: String, accent: Color) -> void:
+	var rect := Rect2(center.x - 49.0, center.y - 16.0, 98.0, 32.0)
+	draw_rect(rect.grow(2.0), Color(0.0, 0.0, 0.0, 0.25), true, 8.0)
+	draw_rect(rect, Color(0.035, 0.065, 0.07, 0.78), true, 8.0)
+	draw_rect(Rect2(rect.position.x + 4.0, rect.position.y + 5.0, 3.0, rect.size.y - 10.0), accent, true, 2.0)
+	draw_string(ThemeDB.fallback_font, center + Vector2(4.0, 4.0), label, HORIZONTAL_ALIGNMENT_CENTER, 86.0, 11, Color(0.91, 0.95, 0.90))
 
 func _save_world() -> void:
 	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "checkpoint_tile": checkpoint_tile, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
