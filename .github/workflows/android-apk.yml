@@ -120,6 +120,28 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
+          # Put signing values directly into the export preset as well as the
+          # environment: Godot validates preset configuration before exporting.
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          path = Path("export_presets.cfg")
+          content = path.read_text()
+          home = os.environ["HOME"]
+          key = f'{home}/.android/debug.keystore'
+          signing = (
+              f'keystore/debug="{key}"\n'
+              'keystore/debug_user="androiddebugkey"\n'
+              'keystore/debug_password="android"\n'
+              f'keystore/release="{key}"\n'
+              'keystore/release_user="androiddebugkey"\n'
+              'keystore/release_password="android"\n'
+          )
+          if 'keystore/debug="' not in content:
+              content = content.replace('package/signed=true\n', 'package/signed=true\n' + signing, 1)
+          path.write_text(content)
+          PY
+          grep -E '^(keystore/(debug|release))' export_presets.cfg
           mkdir -p build
           godot --headless --verbose --path . --export-debug "Android" build/DEEPWILD-Shattered-Lands.apk
 
