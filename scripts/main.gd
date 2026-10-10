@@ -258,7 +258,6 @@ func _mine_block() -> void:
 		var kind := block_type(cell.x, cell.y)
 		if kind == "" or kind == "bedrock":
 			continue
-		world_blocks[str(cell.x) + ":" + str(cell.y)] = ""
 		var drop := "Stone"
 		if kind == "copper_ore":
 			drop = "Copper"
@@ -270,8 +269,13 @@ func _mine_block() -> void:
 			drop = "Snow"
 		elif kind == "planks":
 			drop = "Planks"
+		if int(inventory.get(drop, 0)) >= MAX_STACK:
+			message = drop + " stack full! Block not mined"
+			message_timer = 1.5
+			return
+		world_blocks[str(cell.x) + ":" + str(cell.y)] = ""
 		var added := _add_item(drop, 1)
-		message = "+%d %s" % [added, drop] if added > 0 else "Inventory stack full"
+		message = "+%d %s" % [added, drop]
 		message_timer = 1.2
 		_save_world()
 		return
