@@ -811,6 +811,9 @@ func _draw_world(size: Vector2) -> void:
 	var end_x := mini(WORLD_WIDTH, int(ceil((camera_offset.x + size.x) / TILE)) + 2)
 	var start_y := maxi(0, int(floor(camera_offset.y / TILE)) - 1)
 	var end_y := mini(WORLD_DEPTH, int(ceil((camera_offset.y + size.y) / TILE)) + 1)
+	# Seed offsets are constant for the world; calculate once instead of per visible tile.
+	var cave_seed_offset := int(world_seed % 101)
+	var flora_seed_offset := int(world_seed % 97)
 	for tx in range(start_x, end_x):
 		var surface := int(round(ground_y_at(tx)))
 		var px := float(tx * TILE) - camera_offset.x
@@ -824,7 +827,7 @@ func _draw_world(size: Vector2) -> void:
 				if ty > surface + 5 and ty < WORLD_DEPTH - 4:
 					draw_rect(Rect2(px, py, TILE, TILE), CAVE_VOID_COLOR)
 					# Sparse deterministic cave details, evaluated only for visible cells.
-					var cave_mark := posmod(tx * 37 + ty * 19 + int(world_seed % 101), 23)
+					var cave_mark := posmod(tx * 37 + ty * 19 + cave_seed_offset, 23)
 					if cave_mark == 0:
 						draw_rect(Rect2(px + 3, py + 4, 7, 2), CAVE_MARK_COLOR)
 						draw_rect(Rect2(px + 5, py + 6, 3, 2), CAVE_MARK_SHADOW)
@@ -879,7 +882,7 @@ func _draw_world(size: Vector2) -> void:
 			else:
 				_draw_tree(px, ground_screen_y)
 		else:
-			_draw_ground_flora(px, ground_screen_y, biome, tx)
+			_draw_ground_flora(px, ground_screen_y, biome, tx, flora_seed_offset)
 		var object_key: String = str(tx)
 		if placed_objects.has(object_key):
 			var object_kind: String = str(placed_objects[object_key])
@@ -894,9 +897,10 @@ func _draw_world(size: Vector2) -> void:
 				draw_colored_polygon(PackedVector2Array([Vector2(px + 7, ground_screen_y - 8), Vector2(px + 12, ground_screen_y - 24), Vector2(px + 18, ground_screen_y - 8)]), CAMPFIRE_FLAME_COLOR)
 				draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), CAMPFIRE_CORE_COLOR)
 
-func _draw_ground_flora(x: float, y: float, biome: String, tx: int) -> void:
+	# Seed offset is computed once per frame in _draw_world, not per plant.
+func _draw_ground_flora(x: float, y: float, biome: String, tx: int, flora_seed_offset: int) -> void:
 	# Deterministic, sparse surface plants: no nodes or per-frame allocations.
-	var mark := posmod(tx * 17 + int(world_seed % 97), 19)
+	var mark := posmod(tx * 17 + flora_seed_offset, 19)
 	if biome == "desert":
 		if mark == 2 or mark == 11:
 			draw_rect(Rect2(x + 5, y - 4, 5, 3), FLORA_SAND_DARK)
