@@ -92,8 +92,8 @@ var jump_requested := false
 var mine_requested := false
 var attack_requested := false
 const MAX_STACK := 99
-const RECIPES := ["Torch", "Planks", "Stone Block", "Stone Pickaxe", "Campfire", "Healing Salve"]
-var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Stone Block": 0, "Stone Pickaxe": 0, "Campfire": 0, "Wild Essence": 0, "Healing Salve": 0}
+const RECIPES := ["Torch", "Planks", "Stone Block", "Stone Pickaxe", "Stone Axe", "Campfire", "Healing Salve"]
+var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Stone Block": 0, "Stone Pickaxe": 0, "Stone Axe": 0, "Campfire": 0, "Wild Essence": 0, "Healing Salve": 0}
 var world_blocks: Dictionary = {}
 var generated_tile_cache: Dictionary = {}
 var harvested_trees: Dictionary = {}
@@ -350,14 +350,15 @@ func _chop_tree() -> bool:
 	if best_tile == -1:
 		return false
 	var key := str(best_tile)
-	var hp := int(tree_health.get(key, 3)) - 1
+	var tree_damage := 2 if int(inventory.get("Stone Axe", 0)) > 0 else 1
+	var hp := int(tree_health.get(key, 3)) - tree_damage
 	if hp <= 0 and int(inventory.get("Wood", 0)) + 3 > MAX_STACK:
 		message = "Need space for 3 Wood; tree not felled"
 		message_timer = 1.8
 		return true
 	if hp > 0:
 		tree_health[key] = hp
-		message = "Tree chopped: %d/3" % (3 - hp)
+		message = "Tree chopped: %d/3" % (3 - maxi(hp, 0))
 		message_timer = 1.0
 	else:
 		tree_health.erase(key)
@@ -702,6 +703,16 @@ func _craft_selected() -> void:
 			message = "Stone Pickaxe crafted: stone and copper yield doubled"
 		else:
 			message = "Stone Pickaxe: need 3 Wood + 4 Stone"
+	elif recipe == "Stone Axe":
+		if int(inventory["Stone Axe"]) > 0:
+			message = "You already have a Stone Axe"
+		elif int(inventory["Wood"]) >= 3 and int(inventory["Stone"]) >= 2:
+			_remove_item("Wood", 3)
+			_remove_item("Stone", 2)
+			_add_item("Stone Axe", 1)
+			message = "Stone Axe crafted: trees take half as many hits"
+		else:
+			message = "Stone Axe: need 3 Wood + 2 Stone"
 	elif recipe == "Campfire":
 		if int(inventory["Wood"]) >= 4 and int(inventory["Stone"]) >= 3:
 			if int(inventory["Campfire"]) >= MAX_STACK:
@@ -1095,7 +1106,8 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d STONE %d COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  STONE BLK %d" % [inventory["Planks"], inventory["Stone Block"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 145), "PICKAXE %d  CAMPFIRE %d  ESSENCE %d  SALVE %d" % [inventory["Stone Pickaxe"], inventory["Campfire"], inventory["Wild Essence"], inventory["Healing Salve"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 145), "PICK %d  AXE %d  FIRE %d" % [inventory["Stone Pickaxe"], inventory["Stone Axe"], inventory["Campfire"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 184), "ESSENCE %d  SALVE %d" % [inventory["Wild Essence"], inventory["Healing Salve"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 165), "Campfires restore 5 HP every 3 seconds nearby", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.75, 0.42))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
