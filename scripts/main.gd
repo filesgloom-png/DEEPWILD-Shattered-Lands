@@ -243,6 +243,7 @@ func _chop_tree() -> bool:
 		var wood_added := _add_item("Wood", 3)
 		message = "Tree felled! +%d Wood" % wood_added
 		message_timer = 1.8
+	_save_world()
 	return true
 
 func _mine_block() -> void:
@@ -427,6 +428,7 @@ func _update_campfire_rest(delta: float) -> void:
 		health = mini(100, health + 5)
 		message = "Resting by campfire: +5 HP"
 		message_timer = 1.4
+		_save_world()
 
 func _set_checkpoint() -> void:
 	var tile_x: int = clampi(int(floor(player.x / TILE)), 0, WORLD_WIDTH - 1)
@@ -446,6 +448,7 @@ func _respawn_player() -> void:
 	health = 100
 	message = "Respawned at checkpoint"
 	message_timer = 2.0
+	_save_world()
 
 func _craft_selected() -> void:
 	var recipe: String = str(RECIPES[craft_recipe_index])
