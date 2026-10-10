@@ -676,17 +676,18 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 			var star_radius := 1.0 if i % 4 != 0 else 1.6
 			draw_circle(Vector2(star_x, star_y), star_radius, Color(0.82, 0.91, 1.0, star_alpha))
 	# Two distant parallax layers add depth while keeping the game lightweight.
+	# Their palette is identical across each layer, so calculate it once per frame.
+	var far_color := Color(0.20, 0.35, 0.43).lerp(Color(0.52, 0.69, 0.72), sun)
 	for i in range(9):
 		var x := fposmod(float(i * 210) - camera_offset.x * 0.10, size.x + 300.0) - 150.0
 		var h := 80.0 + float((i * 43) % 95)
 		var y := horizon - h - camera_offset.y * 0.035
-		var far_color := Color(0.20, 0.35, 0.43).lerp(Color(0.52, 0.69, 0.72), sun)
 		draw_colored_polygon(PackedVector2Array([Vector2(x - 135, horizon), Vector2(x, y), Vector2(x + 155, horizon)]), far_color)
+	var near_color := Color(0.15, 0.29, 0.34).lerp(Color(0.34, 0.51, 0.50), sun)
 	for i in range(7):
 		var x := fposmod(float(i * 275 + 95) - camera_offset.x * 0.19, size.x + 360.0) - 180.0
 		var h := 70.0 + float((i * 37) % 72)
 		var y := horizon + 26.0 - h - camera_offset.y * 0.055
-		var near_color := Color(0.15, 0.29, 0.34).lerp(Color(0.34, 0.51, 0.50), sun)
 		draw_colored_polygon(PackedVector2Array([Vector2(x - 130, horizon + 26.0), Vector2(x, y), Vector2(x + 170, horizon + 26.0)]), near_color)
 	# A faint horizon glow adds depth at dawn and dusk without extra scene nodes.
 	var horizon_glow := clampf(1.0 - absf(sun - 0.5) * 3.2, 0.0, 1.0)
