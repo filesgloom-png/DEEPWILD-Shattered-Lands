@@ -32,6 +32,21 @@ const CAMPFIRE_LOG_DARK_COLOR := Color(0.29, 0.19, 0.13)
 const CAMPFIRE_LOG_LIGHT_COLOR := Color(0.45, 0.27, 0.15)
 const CAMPFIRE_FLAME_COLOR := Color(1.0, 0.39, 0.10)
 const CAMPFIRE_CORE_COLOR := Color(1.0, 0.78, 0.22)
+# Scenery palette endpoints are immutable and reused across redraws.
+const SKY_BAND_NIGHT_COLOR := Color(0.08, 0.13, 0.23)
+const SKY_BAND_DAY_COLOR := Color(0.42, 0.72, 0.91)
+const NIGHT_VEIL_COLOR := Color(0.025, 0.045, 0.12)
+const STAR_BASE_COLOR := Color(0.82, 0.91, 1.0)
+const FIREFLY_HALO_COLOR := Color(0.56, 1.0, 0.64)
+const FIREFLY_CORE_COLOR := Color(0.72, 1.0, 0.68)
+const PARALLAX_FAR_NIGHT_COLOR := Color(0.20, 0.35, 0.43)
+const PARALLAX_FAR_DAY_COLOR := Color(0.52, 0.69, 0.72)
+const PARALLAX_NEAR_NIGHT_COLOR := Color(0.15, 0.29, 0.34)
+const PARALLAX_NEAR_DAY_COLOR := Color(0.34, 0.51, 0.50)
+const HORIZON_GLOW_BASE_COLOR := Color(1.0, 0.49, 0.28)
+const HORIZON_LINE_BASE_COLOR := Color(1.0, 0.68, 0.43)
+const CELESTIAL_NIGHT_COLOR := Color(1.0, 0.79, 0.42)
+const CELESTIAL_DAY_COLOR := Color(0.91, 0.94, 1.0)
 # Shared flora palette: reuse immutable colors instead of constructing them per visible plant.
 const FLORA_SAND_DARK := Color(0.56, 0.39, 0.22)
 const FLORA_SAND_LIGHT := Color(0.72, 0.53, 0.30)
@@ -675,16 +690,16 @@ func _draw() -> void:
 func _draw_scenery(size: Vector2, sun: float) -> void:
 	var horizon := size.y * 0.54 - camera_offset.y * 0.04
 	# Subtle atmospheric bands keep the sky from looking flat; reuse one color per frame.
-	var band_color := Color(0.08, 0.13, 0.23).lerp(Color(0.42, 0.72, 0.91), sun)
+	var band_color := SKY_BAND_NIGHT_COLOR.lerp(SKY_BAND_DAY_COLOR, sun)
 	band_color.a = 0.035
 	for band in range(6):
 		draw_rect(Rect2(0, float(band) * size.y / 6.0, size.x, size.y / 6.0 + 1.0), band_color)
 	# A subtle upper-sky night veil adds depth without textures, nodes, or extra scene state.
 	var night_veil := clampf((0.48 - sun) / 0.48, 0.0, 1.0)
-	var night_veil_color := Color(0.025, 0.045, 0.12)
-	var star_base_color := Color(0.82, 0.91, 1.0)
-	var firefly_halo_color := Color(0.56, 1.0, 0.64)
-	var firefly_core_color := Color(0.72, 1.0, 0.68)
+	var night_veil_color := NIGHT_VEIL_COLOR
+	var star_base_color := STAR_BASE_COLOR
+	var firefly_halo_color := FIREFLY_HALO_COLOR
+	var firefly_core_color := FIREFLY_CORE_COLOR
 	if night_veil > 0.0:
 		for band in range(4):
 			var veil_alpha := night_veil * (0.055 - float(band) * 0.010)
@@ -706,13 +721,13 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 			draw_circle(Vector2(star_x, star_y), star_radius, star_color)
 	# Two distant parallax layers add depth while keeping the game lightweight.
 	# Their palette is identical across each layer, so calculate it once per frame.
-	var far_color := Color(0.20, 0.35, 0.43).lerp(Color(0.52, 0.69, 0.72), sun)
+	var far_color := PARALLAX_FAR_NIGHT_COLOR.lerp(PARALLAX_FAR_DAY_COLOR, sun)
 	for i in range(9):
 		var x := fposmod(float(i * 210) - camera_offset.x * 0.10, size.x + 300.0) - 150.0
 		var h := 80.0 + float((i * 43) % 95)
 		var y := horizon - h - camera_offset.y * 0.035
 		draw_colored_polygon(PackedVector2Array([Vector2(x - 135, horizon), Vector2(x, y), Vector2(x + 155, horizon)]), far_color)
-	var near_color := Color(0.15, 0.29, 0.34).lerp(Color(0.34, 0.51, 0.50), sun)
+	var near_color := PARALLAX_NEAR_NIGHT_COLOR.lerp(PARALLAX_NEAR_DAY_COLOR, sun)
 	for i in range(7):
 		var x := fposmod(float(i * 275 + 95) - camera_offset.x * 0.19, size.x + 360.0) - 180.0
 		var h := 70.0 + float((i * 37) % 72)
@@ -721,9 +736,11 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 	# A faint horizon glow adds depth at dawn and dusk without extra scene nodes.
 	var horizon_glow := clampf(1.0 - absf(sun - 0.5) * 3.2, 0.0, 1.0)
 	if horizon_glow > 0.0:
-		var glow_color := Color(1.0, 0.49, 0.28, horizon_glow * 0.10)
+		var glow_color := HORIZON_GLOW_BASE_COLOR
+		glow_color.a = horizon_glow * 0.10
 		draw_rect(Rect2(0.0, horizon - 34.0, size.x, 68.0), glow_color)
-		var glow_line := Color(1.0, 0.68, 0.43, horizon_glow * 0.20)
+		var glow_line := HORIZON_LINE_BASE_COLOR
+		glow_line.a = horizon_glow * 0.20
 		draw_line(Vector2(0.0, horizon + 5.0), Vector2(size.x, horizon + 5.0), glow_line, 1.0)
 	# Tiny fireflies drift through the distant night air; deterministic and draw-only.
 	if night_strength > 0.18:
@@ -766,7 +783,7 @@ func _draw_scenery(size: Vector2, sun: float) -> void:
 			var bird_y := size.y * 0.22 + float(i * 13) + sin(day_time * 1.4 + float(i)) * 4.0
 			draw_line(Vector2(bird_x - 5.0, bird_y), Vector2(bird_x, bird_y + 2.0), wing_color, 1.5)
 			draw_line(Vector2(bird_x, bird_y + 2.0), Vector2(bird_x + 5.0, bird_y), wing_color, 1.5)
-	var celestial := Color(1.0, 0.79, 0.42).lerp(Color(0.91, 0.94, 1.0), sun)
+	var celestial := CELESTIAL_NIGHT_COLOR.lerp(CELESTIAL_DAY_COLOR, sun)
 	# Let the sun and moon travel across a simple arc; position is derived from day_time.
 	var celestial_x := size.x * (0.5 + cos(day_time - PI * 0.5) * 0.36)
 	var celestial_y := size.y * 0.31 - absf(sin(day_time)) * size.y * 0.20
