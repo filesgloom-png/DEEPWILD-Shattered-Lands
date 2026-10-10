@@ -92,8 +92,8 @@ var jump_requested := false
 var mine_requested := false
 var attack_requested := false
 const MAX_STACK := 99
-const RECIPES := ["Torch", "Planks", "Campfire", "Healing Salve"]
-var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Campfire": 0, "Wild Essence": 0, "Healing Salve": 0}
+const RECIPES := ["Torch", "Planks", "Stone Block", "Campfire", "Healing Salve"]
+var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Stone Block": 0, "Campfire": 0, "Wild Essence": 0, "Healing Salve": 0}
 var world_blocks: Dictionary = {}
 var generated_tile_cache: Dictionary = {}
 var harvested_trees: Dictionary = {}
@@ -592,6 +592,24 @@ func _use_selected_item() -> void:
 		generated_tile_cache.erase(block_key)
 		message = "Plank placed"
 		message_timer = 1.5
+	elif recipe == "Stone Block":
+		if int(inventory.get("Stone Block", 0)) <= 0:
+			message = "No Stone Blocks in inventory"
+			message_timer = 1.5
+			return
+		var stone_block_key: String = str(target_tx) + ":" + str(target_ty)
+		if block_type(target_tx, target_ty) != "":
+			message = "Target block is occupied"
+			message_timer = 1.5
+			return
+		if not _remove_item("Stone Block", 1):
+			message = "No Stone Blocks available"
+			message_timer = 1.5
+			return
+		world_blocks[stone_block_key] = "stone"
+		generated_tile_cache.erase(stone_block_key)
+		message = "Stone Block placed"
+		message_timer = 1.5
 	message_timer = maxf(message_timer, 1.5)
 	_save_world()
 
@@ -660,6 +678,16 @@ func _craft_selected() -> void:
 				message = "Crafted 4 Planks"
 		else:
 			message = "Planks: need 2 Wood"
+	elif recipe == "Stone Block":
+		if int(inventory["Stone"]) >= 3:
+			if int(inventory["Stone Block"]) + 2 > MAX_STACK:
+				message = "Need space for 2 Stone Blocks"
+			else:
+				_remove_item("Stone", 3)
+				_add_item("Stone Block", 2)
+				message = "Crafted 2 Stone Blocks"
+		else:
+			message = "Stone Block: need 3 Stone"
 	elif recipe == "Campfire":
 		if int(inventory["Wood"]) >= 4 and int(inventory["Stone"]) >= 3:
 			if int(inventory["Campfire"]) >= MAX_STACK:
@@ -1052,8 +1080,8 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(220, 64), "%d%%" % int(round(hp_ratio * 100.0)), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.95, 0.96, 0.88))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d STONE %d COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  CAMPFIRE %d  ESSENCE %d" % [inventory["Planks"], inventory["Campfire"], inventory["Wild Essence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
-	draw_string(ThemeDB.fallback_font, Vector2(30, 145), "SALVE %d" % inventory["Healing Salve"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  STONE BLK %d" % [inventory["Planks"], inventory["Stone Block"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
+	draw_string(ThemeDB.fallback_font, Vector2(30, 145), "CAMPFIRE %d  ESSENCE %d  SALVE %d" % [inventory["Campfire"], inventory["Wild Essence"], inventory["Healing Salve"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 165), "Campfires restore 5 HP every 3 seconds nearby", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.98, 0.75, 0.42))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
