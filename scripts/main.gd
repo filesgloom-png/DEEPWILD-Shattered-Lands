@@ -1131,7 +1131,7 @@ func _draw_slimes() -> void:
 		if slime_hit_flash_timer > 0.0 and slimes[i].distance_to(slime_hit_flash_position) < 0.1:
 			var flash_strength := clampf(slime_hit_flash_timer / 0.16, 0.0, 1.0)
 			draw_set_transform(p, 0.0, Vector2.ONE)
-			draw_texture_rect_region(CREATURE_ATLAS, Rect2(-24, -30, 48, 48), Rect2(144, 68, 48, 48), false, Color(1.0, 0.58 + flash_strength * 0.35, 0.48 + flash_strength * 0.4, 1.0))
+			draw_texture_rect_region(CREATURE_ATLAS, Rect2(-24, -30, 48, 48), Rect2(144, 68, 48, 48), Color(1.0, 0.58 + flash_strength * 0.35, 0.48 + flash_strength * 0.4, 1.0))
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		else:
 			draw_texture_rect_region(CREATURE_ATLAS, Rect2(p.x - 24, p.y - 30, 48, 48), Rect2(144, 68, 48, 48))
