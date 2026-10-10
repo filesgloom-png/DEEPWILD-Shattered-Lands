@@ -872,31 +872,33 @@ func _draw_world(size: Vector2) -> void:
 				draw_line(Vector2(px, py + 1.0), Vector2(px + TILE, py + 1.0), edge_color, 1.0)
 				draw_line(Vector2(px + 2.0, py + 3.0), Vector2(px + TILE - 2.0, py + 3.0), EDGE_SHADOW_COLOR, 1.0)
 		var ground_screen_y := float(surface * TILE) - camera_offset.y
-		var biome := biome_at(tx)
-		var has_tree := _tree_exists(tx) and surface > 0
-		if has_tree:
-			if biome == "desert":
-				_draw_cactus(px, ground_screen_y)
-			elif biome == "snow":
-				_draw_pine(px, ground_screen_y)
+		if ground_screen_y >= -120.0 and ground_screen_y <= size.y + 120.0:
+			var ground_screen_y := float(surface * TILE) - camera_offset.y
+			var biome := biome_at(tx)
+			var has_tree := _tree_exists(tx) and surface > 0
+			if has_tree:
+				if biome == "desert":
+					_draw_cactus(px, ground_screen_y)
+				elif biome == "snow":
+					_draw_pine(px, ground_screen_y)
+				else:
+					_draw_tree(px, ground_screen_y)
 			else:
-				_draw_tree(px, ground_screen_y)
-		else:
-			_draw_ground_flora(px, ground_screen_y, biome, tx, flora_seed_offset)
-		var object_key: String = str(tx)
-		if placed_objects.has(object_key):
-			var object_kind: String = str(placed_objects[object_key])
-			if object_kind == "Torch":
-				draw_circle(Vector2(px + 12, ground_screen_y - 24), 25.0, TORCH_GLOW_COLOR)
-				draw_rect(Rect2(px + 10, ground_screen_y - 25, 4, 25), TORCH_WOOD_COLOR)
-				draw_rect(Rect2(px + 9, ground_screen_y - 30, 6, 8), TORCH_FLAME_COLOR)
-				draw_rect(Rect2(px + 11, ground_screen_y - 34, 3, 5), TORCH_CORE_COLOR)
-			elif object_kind == "Campfire":
-				draw_rect(Rect2(px + 2, ground_screen_y - 5, 20, 5), CAMPFIRE_LOG_DARK_COLOR)
-				draw_rect(Rect2(px + 4, ground_screen_y - 10, 16, 4), CAMPFIRE_LOG_LIGHT_COLOR)
-				draw_colored_polygon(PackedVector2Array([Vector2(px + 7, ground_screen_y - 8), Vector2(px + 12, ground_screen_y - 24), Vector2(px + 18, ground_screen_y - 8)]), CAMPFIRE_FLAME_COLOR)
-				draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), CAMPFIRE_CORE_COLOR)
-
+				_draw_ground_flora(px, ground_screen_y, biome, tx, flora_seed_offset)
+			var object_key: String = str(tx)
+			if placed_objects.has(object_key):
+				var object_kind: String = str(placed_objects[object_key])
+				if object_kind == "Torch":
+					draw_circle(Vector2(px + 12, ground_screen_y - 24), 25.0, TORCH_GLOW_COLOR)
+					draw_rect(Rect2(px + 10, ground_screen_y - 25, 4, 25), TORCH_WOOD_COLOR)
+					draw_rect(Rect2(px + 9, ground_screen_y - 30, 6, 8), TORCH_FLAME_COLOR)
+					draw_rect(Rect2(px + 11, ground_screen_y - 34, 3, 5), TORCH_CORE_COLOR)
+				elif object_kind == "Campfire":
+					draw_rect(Rect2(px + 2, ground_screen_y - 5, 20, 5), CAMPFIRE_LOG_DARK_COLOR)
+					draw_rect(Rect2(px + 4, ground_screen_y - 10, 16, 4), CAMPFIRE_LOG_LIGHT_COLOR)
+					draw_colored_polygon(PackedVector2Array([Vector2(px + 7, ground_screen_y - 8), Vector2(px + 12, ground_screen_y - 24), Vector2(px + 18, ground_screen_y - 8)]), CAMPFIRE_FLAME_COLOR)
+					draw_colored_polygon(PackedVector2Array([Vector2(px + 10, ground_screen_y - 8), Vector2(px + 13, ground_screen_y - 18), Vector2(px + 16, ground_screen_y - 8)]), CAMPFIRE_CORE_COLOR)
+	
 	# Seed offset is computed once per frame in _draw_world, not per plant.
 func _draw_ground_flora(x: float, y: float, biome: String, tx: int, flora_seed_offset: int) -> void:
 	# Deterministic, sparse surface plants: no nodes or per-frame allocations.
