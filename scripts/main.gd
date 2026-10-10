@@ -835,8 +835,20 @@ func _draw_hud(size: Vector2) -> void:
 	draw_rect(Rect2(16, 16, 350, 178), Color(0.055, 0.08, 0.10, 0.84))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 42), "DEEPWILD", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.91, 0.83, 0.57))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 65), "HP", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
-	draw_rect(Rect2(62, 52, 150, 15), Color(0.28, 0.15, 0.16))
-	draw_rect(Rect2(62, 52, 150.0 * float(health) / 100.0, 15), Color(0.84, 0.25, 0.26))
+	var hp_ratio := clampf(float(health) / 100.0, 0.0, 1.0)
+	var hp_color := Color(0.84, 0.25, 0.26)
+	if health > 60:
+		hp_color = Color(0.28, 0.78, 0.48)
+	elif health > 25:
+		hp_color = Color(0.94, 0.63, 0.24)
+	draw_rect(Rect2(60, 50, 154, 19), Color(0.035, 0.045, 0.055, 0.95))
+	draw_rect(Rect2(64, 54, 146, 11), Color(0.22, 0.12, 0.14))
+	draw_rect(Rect2(64, 54, 146.0 * hp_ratio, 11), hp_color)
+	for segment in range(1, 5):
+		var divider_x := 64.0 + float(segment) * 29.2
+		draw_line(Vector2(divider_x, 54), Vector2(divider_x, 65), Color(0.035, 0.045, 0.055, 0.58), 1.0)
+	draw_rect(Rect2(60, 50, 154, 19), Color(0.72, 0.82, 0.76, 0.55), false, 1.0)
+	draw_string(ThemeDB.fallback_font, Vector2(220, 64), "%d%%" % int(round(hp_ratio * 100.0)), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.95, 0.96, 0.88))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 91), "WOOD %d STONE %d COPPER %d" % [inventory["Wood"], inventory["Stone"], inventory["Copper"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  CAMPFIRE %d  ESSENCE %d" % [inventory["Planks"], inventory["Campfire"], inventory["Wild Essence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
