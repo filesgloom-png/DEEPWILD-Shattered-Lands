@@ -881,12 +881,14 @@ func _draw_world(size: Vector2) -> void:
 			var biome := biome_at(tx)
 			var has_tree := _tree_exists(tx) and surface > 0
 			if has_tree:
-				if biome == "desert":
-					_draw_cactus(px, ground_screen_y)
-				elif biome == "snow":
-					_draw_pine(px, ground_screen_y)
-				else:
-					_draw_tree(px, ground_screen_y)
+				# Tree sprites are 48 px wide; skip atlas draws when fully beyond the viewport.
+				if px + 47.0 >= 0.0 and px - 1.0 <= size.x:
+					if biome == "desert":
+						_draw_cactus(px, ground_screen_y)
+					elif biome == "snow":
+						_draw_pine(px, ground_screen_y)
+					else:
+						_draw_tree(px, ground_screen_y)
 			elif ground_screen_y >= -12.0 and ground_screen_y <= size.y + 12.0:
 				# Small plants are only drawn when their short silhouettes can reach the viewport.
 				_draw_ground_flora(px, ground_screen_y, biome, tx, flora_seed_offset)
