@@ -32,6 +32,7 @@ var craft_recipe_index := 0
 var slimes: Array[Vector2] = []
 var health := 100
 var day_time := 0.0
+var day_count := 1
 var message := "Welcome to the Shattered Lands"
 var message_timer := 4.0
 var save_timer := 0.0
@@ -48,7 +49,12 @@ func _ready() -> void:
 	set_process(true)
 
 func _process(delta: float) -> void:
-	day_time = fmod(day_time + delta * 0.018, TAU)
+	var next_day_time: float = day_time + delta * 0.018
+	if next_day_time >= TAU:
+		day_count += 1
+		message = "Day %d begins" % day_count
+		message_timer = 2.0
+	day_time = fmod(next_day_time, TAU)
 	message_timer = maxf(0.0, message_timer - delta)
 	save_timer += delta
 	if save_timer >= 12.0:
@@ -552,7 +558,7 @@ func _draw_hud(size: Vector2) -> void:
 	draw_string(ThemeDB.fallback_font, Vector2(30, 108), "DIRT %d SAND %d SNOW %d TORCH %d" % [inventory["Dirt"], inventory["Sand"], inventory["Snow"], inventory["Torch"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(30, 126), "PLANKS %d  CAMPFIRE %d  ESSENCE %d" % [inventory["Planks"], inventory["Campfire"], inventory["Wild Essence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.88, 0.90, 0.82))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 49), "RECIPE: " + RECIPES[craft_recipe_index].to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Color(1.0, 0.91, 0.69))
-	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY 1  •  " + biome_at(int(player.x / TILE)).to_upper(), HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(size.x - 18, 28), "DAY %d  •  %s" % [day_count, biome_at(int(player.x / TILE)).to_upper()], HORIZONTAL_ALIGNMENT_RIGHT, -1, 14, Color.WHITE)
 	if message_timer > 0.0:
 		var width := minf(size.x - 40.0, 510.0)
 		draw_rect(Rect2((size.x - width) * 0.5, 34, width, 38), Color(0.05, 0.07, 0.08, 0.82))
@@ -580,7 +586,7 @@ func _draw_button(center: Vector2, label: String, color: Color) -> void:
 	draw_string(ThemeDB.fallback_font, center + Vector2(0, 5), label, HORIZONTAL_ALIGNMENT_CENTER, 72, 12, Color.WHITE)
 
 func _save_world() -> void:
-	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
+	var data := {"world_seed": world_seed, "player_x": player.x, "player_y": player.y, "health": health, "day_count": day_count, "day_time": day_time, "inventory": inventory, "blocks": world_blocks, "harvested_trees": harvested_trees, "tree_health": tree_health, "placed_objects": placed_objects, "craft_recipe_index": craft_recipe_index, "slimes": []}
 	for slime in slimes:
 		data["slimes"].append([slime.x, slime.y])
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -599,6 +605,8 @@ func _load_world() -> void:
 	world_seed = int(parsed.get("world_seed", world_seed))
 	player = Vector2(float(parsed.get("player_x", 320.0)), float(parsed.get("player_y", 240.0)))
 	health = int(parsed.get("health", 100))
+	day_count = maxi(1, int(parsed.get("day_count", 1)))
+	day_time = fposmod(float(parsed.get("day_time", day_time)), TAU)
 	var saved_inventory = parsed.get("inventory", {})
 	for key in inventory:
 		inventory[key] = int(saved_inventory.get(key, inventory[key]))
