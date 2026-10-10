@@ -75,7 +75,21 @@ jobs:
           EOF
           # Also put the debug signing values in the preset itself so validation
           # does not depend on fallback behavior in EditorSettings.
-          sed -i "s|package/signed=true|package/signed=true\\nkeystore/debug=\\"$HOME/.android/debug.keystore\\"\\nkeystore/debug_user=\\"androiddebugkey\\"\\nkeystore/debug_password=\\"android\\"|" export_presets.cfg
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          preset = Path("export_presets.cfg")
+          content = preset.read_text()
+          key = f'{os.environ["HOME"]}/.android/debug.keystore'
+          signing = (
+              f'keystore/debug="{key}"\n'
+              'keystore/debug_user="androiddebugkey"\n'
+              'keystore/debug_password="android"\n'
+          )
+          if 'keystore/debug="' not in content:
+              content = content.replace('package/signed=true\n', 'package/signed=true\n' + signing, 1)
+          preset.write_text(content)
+          PY
           echo "=== Godot Android settings ==="
           cat "$HOME/.config/godot/editor_settings-4.5.tres"
           grep -E '^(keystore/debug|keystore/debug_user|keystore/debug_password)=' export_presets.cfg
@@ -83,6 +97,7 @@ jobs:
 
       - name: Validate Godot project
         run: |
+          set -o pipefail
           godot --headless --verbose --editor --path . --quit 2>&1 | tee /tmp/godot-validation.log
           if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script" /tmp/godot-validation.log; then
             echo "Godot reported a script loading or parse error."
@@ -91,6 +106,7 @@ jobs:
 
       - name: Export Android ARM64 APK
         run: |
+          set -o pipefail
           echo "=== Java and Android SDK ==="
           java -version
           ls -ld "$JAVA_HOME" "$ANDROID_HOME" "$ANDROID_HOME/platform-tools" "$ANDROID_HOME/platforms/android-35" "$ANDROID_HOME/build-tools/35.0.0"
