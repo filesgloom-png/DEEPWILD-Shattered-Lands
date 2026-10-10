@@ -270,6 +270,7 @@ func _mine_block() -> void:
 		var added := _add_item(drop, 1)
 		message = "+%d %s" % [added, drop] if added > 0 else "Inventory stack full"
 		message_timer = 1.2
+		_save_world()
 		return
 	message = "Move close to a block or tree"
 	message_timer = 1.5
@@ -281,6 +282,7 @@ func _attack() -> void:
 			var essence_added := _add_item("Wild Essence", 1)
 			message = "Slime defeated! +%d Wild Essence" % essence_added
 			message_timer = 2.0
+			_save_world()
 			return
 	message = "Swing!"
 	message_timer = 0.7
@@ -403,6 +405,7 @@ func _use_selected_item() -> void:
 		message = "Plank placed"
 		message_timer = 1.5
 	message_timer = maxf(message_timer, 1.5)
+	_save_world()
 
 func _update_campfire_rest(delta: float) -> void:
 	if health >= 100:
@@ -431,6 +434,7 @@ func _set_checkpoint() -> void:
 	player_respawn = Vector2(float(tile_x * TILE) + TILE * 0.5, _ground_surface_y(tile_x))
 	message = "Checkpoint set"
 	message_timer = 1.5
+	_save_world()
 
 func _respawn_player() -> void:
 	var respawn_x: float = player_respawn.x
@@ -489,6 +493,7 @@ func _craft_selected() -> void:
 		else:
 			message = "Salve: need 2 Essence + 1 Wood"
 	message_timer = 1.8
+	_save_world()
 
 func _draw() -> void:
 	var size := get_viewport_rect().size
@@ -677,13 +682,13 @@ func _load_world() -> void:
 	day_count = maxi(1, int(parsed.get("day_count", 1)))
 	day_time = fposmod(float(parsed.get("day_time", day_time)), TAU)
 	checkpoint_tile = int(parsed.get("checkpoint_tile", -1))
-	if checkpoint_tile >= 0:
-		checkpoint_tile = clampi(checkpoint_tile, 0, WORLD_WIDTH - 1)
-		player_respawn = Vector2(float(checkpoint_tile * TILE) + TILE * 0.5, _ground_surface_y(checkpoint_tile))
 	var saved_inventory = parsed.get("inventory", {})
 	for key in inventory:
 		inventory[key] = int(saved_inventory.get(key, inventory[key]))
 	world_blocks = parsed.get("blocks", {})
+	if checkpoint_tile >= 0:
+		checkpoint_tile = clampi(checkpoint_tile, 0, WORLD_WIDTH - 1)
+		player_respawn = Vector2(float(checkpoint_tile * TILE) + TILE * 0.5, _ground_surface_y(checkpoint_tile))
 	harvested_trees = parsed.get("harvested_trees", {})
 	tree_health = parsed.get("tree_health", {})
 	placed_objects = parsed.get("placed_objects", {})
