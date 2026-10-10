@@ -709,7 +709,7 @@ func _draw_player() -> void:
 func _draw_slimes() -> void:
 	for slime in slimes:
 		var p := slime - camera_offset
-		draw_texture_rect_region(CREATURE_ATLAS, Rect2(p.x - 24, p.y - 37, 48, 120), Rect2(144, 0, 48, 120))
+		draw_texture_rect_region(CREATURE_ATLAS, Rect2(p.x - 24, p.y - 30, 48, 48), Rect2(144, 68, 48, 48))
 
 func _draw_hud(size: Vector2) -> void:
 	draw_rect(Rect2(16, 16, 350, 178), Color(0.055, 0.08, 0.10, 0.84))
