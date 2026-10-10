@@ -25,6 +25,7 @@ const MAX_STACK := 99
 const RECIPES := ["Torch", "Planks", "Campfire", "Healing Salve"]
 var inventory := {"Wood": 0, "Stone": 0, "Copper": 0, "Dirt": 0, "Sand": 0, "Snow": 0, "Torch": 0, "Planks": 0, "Campfire": 0, "Wild Essence": 0, "Healing Salve": 0}
 var world_blocks: Dictionary = {}
+var generated_tile_cache: Dictionary = {}
 var harvested_trees: Dictionary = {}
 var tree_health: Dictionary = {}
 var placed_objects: Dictionary = {}
@@ -176,33 +177,43 @@ func _ground_surface_y(tile_x: int) -> float:
 	return float(WORLD_DEPTH * TILE)
 
 func block_type(tile_x: int, tile_y: int) -> String:
+	if tile_x < 0 or tile_x >= WORLD_WIDTH or tile_y < 0 or tile_y >= WORLD_DEPTH:
+		return ""
 	var key := str(tile_x) + ":" + str(tile_y)
+	# Player edits override generated terrain; untouched cells are cached so
+	# biome noise and cave math are not recalculated every rendered frame.
 	if world_blocks.has(key):
 		return str(world_blocks[key])
+	if generated_tile_cache.has(key):
+		return str(generated_tile_cache[key])
 	var surface := int(round(ground_y_at(tile_x)))
+	var generated := ""
 	if tile_y < surface:
-		return ""
-	if tile_y == surface:
-		var biome := biome_at(tile_x)
-		if biome == "desert":
-			return "sand"
-		if biome == "snow":
-			return "snow"
-		return "grass"
-	if tile_y > surface + 5 and tile_y < WORLD_DEPTH - 4 and _is_cave(tile_x, tile_y):
-		return ""
-	if tile_y < surface + 5:
-		var biome := biome_at(tile_x)
-		if biome == "desert":
-			return "sandstone"
-		if biome == "snow":
-			return "permafrost"
-		return "dirt"
-	if tile_y < WORLD_DEPTH - 3:
-		if _noise_value(tile_x * 3 + tile_y * 7, 41) > 0.965:
-			return "copper_ore"
-		return "stone"
-	return "bedrock"
+		generated = ""
+	elif tile_y == surface:
+		var surface_biome := biome_at(tile_x)
+		if surface_biome == "desert":
+			generated = "sand"
+		elif surface_biome == "snow":
+			generated = "snow"
+		else:
+			generated = "grass"
+	elif tile_y > surface + 5 and tile_y < WORLD_DEPTH - 4 and _is_cave(tile_x, tile_y):
+		generated = ""
+	elif tile_y < surface + 5:
+		var underground_biome := biome_at(tile_x)
+		if underground_biome == "desert":
+			generated = "sandstone"
+		elif underground_biome == "snow":
+			generated = "permafrost"
+		else:
+			generated = "dirt"
+	elif tile_y < WORLD_DEPTH - 3:
+		generated = "copper_ore" if _noise_value(tile_x * 3 + tile_y * 7, 41) > 0.965 else "stone"
+	else:
+		generated = "bedrock"
+	generated_tile_cache[key] = generated
+	return generated
 
 func _is_cave(tile_x: int, tile_y: int) -> bool:
 	var a := sin(float(tile_x) * 0.31 + float(world_seed % 113) * 0.04)
@@ -300,6 +311,7 @@ func _mine_block() -> void:
 			message_timer = 1.5
 			return
 		world_blocks[str(cell.x) + ":" + str(cell.y)] = ""
+		generated_tile_cache.erase(str(cell.x) + ":" + str(cell.y))
 		var added := _add_item(drop, 1)
 		message = "+%d %s" % [added, drop]
 		message_timer = 1.2
@@ -453,6 +465,7 @@ func _use_selected_item() -> void:
 			message_timer = 1.5
 			return
 		world_blocks[block_key] = "planks"
+		generated_tile_cache.erase(block_key)
 		message = "Plank placed"
 		message_timer = 1.5
 	message_timer = maxf(message_timer, 1.5)
@@ -609,7 +622,7 @@ func _draw_world(size: Vector2) -> void:
 				continue
 			# Cave voids are dark, not transparent holes showing the sky behind the world.
 			if kind == "":
-				if ty > surface + 5 and ty < WORLD_DEPTH - 4 and _is_cave(tx, ty):
+				if ty > surface + 5 and ty < WORLD_DEPTH - 4:
 					draw_rect(Rect2(px, py, TILE, TILE), Color(0.045, 0.055, 0.075))
 					if (tx + ty) % 5 == 0:
 						draw_rect(Rect2(px + 4, py + 5, 3, 2), Color(0.12, 0.15, 0.18))
