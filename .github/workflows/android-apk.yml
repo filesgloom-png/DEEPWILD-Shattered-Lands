@@ -55,6 +55,26 @@ jobs:
           EOF
           cat "$HOME/.config/godot/editor_settings-4.tres"
 
+      - name: Inspect and install Android SDK components
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "JAVA_HOME=$JAVA_HOME"
+          echo "SDK directory overview:"
+          find "$ANDROID_HOME" -maxdepth 3 -type d 2>/dev/null | sort | head -200 || true
+          SDKMANAGER="$(find "$ANDROID_HOME" /opt -type f -name sdkmanager 2>/dev/null | head -1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager was not found under $ANDROID_HOME or /opt"
+            find /usr -type f -name sdkmanager 2>/dev/null | head -50 || true
+            exit 1
+          fi
+          echo "Using sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.0"
+          ls -la "$ANDROID_HOME/platforms"
+          ls -la "$ANDROID_HOME/build-tools"
+
       - name: Prepare Android debug signing key
         run: |
           mkdir -p "$HOME/.android"
